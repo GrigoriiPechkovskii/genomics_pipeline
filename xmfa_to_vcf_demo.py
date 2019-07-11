@@ -9,52 +9,60 @@ import os
 
 files = os.listdir()
 directory = os.getcwd()
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf_demo/mini_test.xmfa'
-
-#with open(directory_file_xmfa) as file_xmfa:
-#    pass
-
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
 
 
 file_xmfa = open(directory_file_xmfa)
 
 def get_mauve_index(file_xmfa):
-    number_seq_dict = dict()
+    '''Iter on xmfa header with #
+        and return dict with id(key) and name genome(values)
+    '''
+    id_nameseq_dict = dict()
     for file_line in file_xmfa:
         #FormatVersion Mauve1
         if '#' in file_line:
             find = re.search(r'Sequence(\d*)File\t(.*)\.',file_line)
             if find != None:
-                number_seq_dict[find.group(1)] = os.path.basename(find.group(2))
+                id_nameseq_dict[find.group(1)] = os.path.basename(find.group(2))
         #if '>' in file_line:
         else:
             break
     file_xmfa.close()
-    return number_seq_dict
+    return id_nameseq_dict
 
-number_seq_dict = get_mauve_index(file_xmfa)
-
-seq_dict = dict()
+id_nameseq_dict = get_mauve_index(file_xmfa)
 
 
+def head_vcf(name_seq:list):
+    '''Function for make vcf header,
+       get name_seq: list of name from xmfa header with strict order
+    '''
+    columns_name =['#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT']
+    columns_name += name_seq
+    head = '\t'.join(columns_name) + '\n'
+    with open('test_mini.vcf','w') as file_vcf:
+        file_vcf.write(head)
+    print(head)
+
+head_vcf(list(id_nameseq_dict.values()))
 
 def single_aln_generator(directory_file_xmfa):
-    ''' '''
+    '''Generator for xmfa,
+       get a directory_file_xmfa
+       yield separate with = aln '''
     title_seq = []
     seq_seq = []
     single_aln = ''
     notfirst = False
     tmp = ''
-    file_xmfa = open(directory_file_xmfa)
-
-    
+    file_xmfa = open(directory_file_xmfa)    
     for line in file_xmfa:
         if '#' not in line and '=' not in line: #dont want make check for all string
-            single_aln += line
-                
+            single_aln += line                
             if '>' in line:
                 title_seq.append(line.strip())
-
                 if notfirst:
                     seq_seq.append(tmp)
                     tmp = ''                
@@ -74,49 +82,74 @@ def single_aln_generator(directory_file_xmfa):
 
 
 def parser_title(title_seq:list):
-    ''' '''
+    '''Parsing > line
+       get title_seq(> line)
+       return positioin start - end sequence
+       and name_idseq - name sequece from header name and id in > line
+    '''
     position_every = []
     position_every_dict = dict()
+    position_every_num_dict = dict()
     name_every = []
     for title in title_seq:
+
+        id_search = re.search(r'(\d*):',title)
+        id_seq = id_search.group(1)
+
         #!!!MAUVE
-        name_search = re.search(r'(/.*)\.',title)
-        name = name_search.group(1)
-        name = os.path.basename(name)
-        name_every.append(name)
+        #name_search = re.search(r'(/.*)\.',title)
+        #name = name_search.group(1)
+        #name = os.path.basename(name)
+        #name_every.append(name)
 
         position_search = re.search(r'\d*:(\d*)-(\d*)\b',title)
         position = [position_search.group(1),position_search.group(2)]
         position_every += [position]
 
-        position_every_dict[name] = position_every
+        #position_every_dict[name] = position
 
-    return name_every,position_every,position_every_dict
+        position_every_num_dict[id_seq] = position
+
+    name_seq_title = dict()
+    for key,val in position_every_num_dict.items() :
+        #print(id_nameseq_dict[key])
+        name_seq_title[id_nameseq_dict[key]] = val#!id_nameseq_dict frome up namespace
+     
+    pos = list(name_seq_title.values())
+    name_idseq = list(name_seq_title)
+
+    #return name_every,position_every,position_every_dict,position_every_num_dict,pos,name_idseq
+    return pos,name_idseq
 
 
-def diffinder(seq_seq,position):
+def diffinder(seq_seq,position,name_seq,head):
     '''Fun fo detect dif betwen aln
     '''
-    ref_seq = seq_seq[0]
-    pos_vcf = int(position[0][0]) - 1    
+    ref_seq = seq_seq[0]#!reference sequence for compare  
+    pos_vcf = int(position[0][0]) #- 1#reference start position
+    name_bin_dict = {x: "NA" for x in head}
+    
 
     for sym_num in range(len(ref_seq)):
-
         alt = set()#множество альтернативных вариантов
         alt_dict = dict()
         var_bin = list()
+        var_bin_dict = dict()
         alt_num = 0
 
         if ref_seq[sym_num] != '-':
                 #print(ref_seq[sym_num])                
                 pos_vcf += 1
-        for seq_num in range(len(seq_seq)):
-
+        for seq_num,name in zip(range(len(seq_seq)),name_seq):
+            #print(name)
             seq = seq_seq[seq_num]  #! for more clarity code 
 
             if ref_seq[sym_num] == seq[sym_num]:
                 alt_dict[ref_seq[sym_num]] = 0
                 var_bin.append(alt_dict[seq[sym_num]])
+                #var_bin_dict[name] = alt_dict[seq[sym_num]]
+                name_bin_dict[name] = str(alt_dict[seq[sym_num]])
+
                 #var_bin.append(0)                
             else:
                 alt.add(seq[sym_num])#Запишу множество альтернативных вариантов
@@ -125,19 +158,29 @@ def diffinder(seq_seq,position):
                     alt_num += 1
                     alt_dict[seq[sym_num]] = alt_num
 
-                var_bin.append(alt_dict[seq[sym_num]])#0 и 1
-
+                var_bin.append(alt_dict[seq[sym_num]])
+                #var_bin_dict[name] = alt_dict[seq[sym_num]]
+                name_bin_dict[name] = str(alt_dict[seq[sym_num]])
+        #under function maybe
         if len(alt) != 0:
-            yield pos_vcf,ref_seq[sym_num],alt,alt_dict,var_bin   
-    #return ref_seq[sym_num],alt,var_bin,alt_dict,pos_vcf
 
+            columns_name =['#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT']
+            name_bin = '\t'.join(list(name_bin_dict.values()))
+            columns_name_dif =['#CHROM',str(pos_vcf),'ID',ref_seq[sym_num],','.join(list(alt_dict)[1:]),'QUAL','FILTER','INFO','FORMAT',name_bin]
+            columns_name_dif = '\t'.join(columns_name_dif)
+            columns_name_dif += '\n'
+            with open('test_mini.vcf','a') as file_vcf:
+                file_vcf.write(columns_name_dif)
 
+            yield pos_vcf,ref_seq[sym_num],alt,alt_dict,var_bin,name_bin_dict,columns_name_dif
 
+            
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     #print(title_seq,seq_seq)
-    pos = parser_title(title_seq)
+    pos_set = parser_title(title_seq)
     #stat = diffinder(seq_seq,pos[1])
-    for i in diffinder(seq_seq,pos[1]):
-        print(i)
+    for i in diffinder(seq_seq,pos_set[0],pos_set[1],list(id_nameseq_dict.values())):
+        pass
+        #print(i)
 
 print('end')
