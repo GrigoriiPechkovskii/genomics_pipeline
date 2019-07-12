@@ -131,7 +131,9 @@ def diffinder(seq_seq,position,name_seq,head):
     
 
     for sym_num in range(len(ref_seq)):
-        alt = set()#множество альтернативных вариантов
+        
+        sym_eq = sym_num
+        alt = set()#set alt variance
         alt_dict = dict()
         var_bin = list()
         var_bin_dict = dict()
@@ -142,9 +144,10 @@ def diffinder(seq_seq,position,name_seq,head):
                 pos_vcf += 1
         for seq_num,name in zip(range(len(seq_seq)),name_seq):
             #print(name)
-            seq = seq_seq[seq_num]  #! for more clarity code 
+            seq = seq_seq[seq_num]  #!Letter, for more clarity code 
 
             if ref_seq[sym_num] == seq[sym_num]:
+
                 alt_dict[ref_seq[sym_num]] = 0
                 var_bin.append(alt_dict[seq[sym_num]])
                 #var_bin_dict[name] = alt_dict[seq[sym_num]]
@@ -152,7 +155,7 @@ def diffinder(seq_seq,position,name_seq,head):
 
                 #var_bin.append(0)                
             else:
-                alt.add(seq[sym_num])#Запишу множество альтернативных вариантов
+                alt.add(seq[sym_num])#set alt variance
                 
                 if seq[sym_num] not in alt_dict:
                     alt_num += 1
@@ -161,6 +164,12 @@ def diffinder(seq_seq,position,name_seq,head):
                 var_bin.append(alt_dict[seq[sym_num]])
                 #var_bin_dict[name] = alt_dict[seq[sym_num]]
                 name_bin_dict[name] = str(alt_dict[seq[sym_num]])
+
+        if len(alt) == 1:
+            sym_eq = sym_num
+        else:
+            #sym_dif += [sym_num]
+            pass
         #under function maybe
         if len(alt) != 0:
 
@@ -173,14 +182,58 @@ def diffinder(seq_seq,position,name_seq,head):
                 file_vcf.write(columns_name_dif)
 
             yield pos_vcf,ref_seq[sym_num],alt,alt_dict,var_bin,name_bin_dict,columns_name_dif
+            #yield 
 
-            
+
+'''
+for i in zip(*seq_seq):
+    print(i)
+'''
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     #print(title_seq,seq_seq)
     pos_set = parser_title(title_seq)
     #stat = diffinder(seq_seq,pos[1])
     for i in diffinder(seq_seq,pos_set[0],pos_set[1],list(id_nameseq_dict.values())):
         pass
+
         #print(i)
+#req add position parametr if need break loop through equal symbol
+sym_seq_start = 'blank'
+sym_num_start = 0
+sym_seq_end_last = ''
+sym_seq_lst = list()
+ref_pos = int(pos_set[0][0][0])
+for sym_num,sym_seq in enumerate(zip(*seq_seq)):
+    sym_num += 1 
+    if len(set(sym_seq)) > 1:
+
+        sym_seq_end = sym_seq
+        sym_num_end = sym_num
+
+        sym_seq_lst += [list(sym_seq)]
+        #print('start=',sym_num_start,sym_seq_start)
+        #print('if',sym_num,set(sym_seq),sym_seq_lst)
+
+
+    elif len(set(sym_seq)) <= 1 and sym_seq_end != sym_seq_end_last:
+    #else:#если равны
+        
+        print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
+            'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n')        
+        sym_seq_end_last = sym_seq_end
+
+    else:
+        sym_num_start = sym_num
+        sym_seq_start = sym_seq
+        sym_seq_lst = []
+
+def join(massive_str):
+    massive_list = []
+    for one_str in massive_str:
+        massive_list.append(''.join(list(one_str)))
+    return massive_list
+
+#seq_seq[3][79:83]
+#seq_seq[0][79:83]
 
 print('end')
