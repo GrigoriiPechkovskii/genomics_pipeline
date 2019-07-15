@@ -196,30 +196,43 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     for i in diffinder(seq_seq,pos_set[0],pos_set[1],list(id_nameseq_dict.values())):
         pass
 
-        #print(i)
+        print(pos_set)
 #req add position parametr if need break loop through equal symbol
 sym_seq_start = 'blank'
+sym_seq_end = ''
 sym_num_start = 0
 sym_seq_end_last = ''
 sym_seq_lst = list()
 ref_pos = int(pos_set[0][0][0])
 for sym_num,sym_seq in enumerate(zip(*seq_seq)):
     sym_num += 1 
-    if len(set(sym_seq)) > 1:
+    if len(set(sym_seq)) > 1:#input in loop if alternative exist
+       
 
         sym_seq_end = sym_seq
         sym_num_end = sym_num
 
         sym_seq_lst += [list(sym_seq)]
+
+        
         #print('start=',sym_num_start,sym_seq_start)
         #print('if',sym_num,set(sym_seq),sym_seq_lst)
 
 
-    elif len(set(sym_seq)) <= 1 and sym_seq_end != sym_seq_end_last:
+    elif sym_seq_end != sym_seq_end_last:#and len(set(sym_seq)) <= 1:
     #else:#если равны
         
+        if sym_seq_start != 'blank':#add reference sym to list
+                #sym_seq_lst.append(list(sym_seq_start))
+                sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
+                #[list(sym_seq_start)].append(sym_seq_lst)
+
+
         print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
             'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n')        
+        
+        
+
         sym_seq_end_last = sym_seq_end
 
     else:
@@ -235,5 +248,11 @@ def join(massive_str):
 
 #seq_seq[3][79:83]
 #seq_seq[0][79:83]
-
+w = join(seq_lst)
+list(zip(*w))
+list(zip(*seq_lst))
+join(list(zip(*w)))
+join(list(zip(*seq_lst)))#!alt var
+set((list(zip(*seq_lst))))
+set((zip(*seq_lst)))
 print('end')
