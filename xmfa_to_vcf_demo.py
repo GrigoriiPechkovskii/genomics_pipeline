@@ -10,7 +10,7 @@ import os
 files = os.listdir()
 directory = os.getcwd()
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
 name_vcf = 'test_mini.vcf'
 
 file_xmfa = open(directory_file_xmfa)
@@ -122,168 +122,44 @@ def parser_title(title_seq:list):
     return pos,name_idseq
 
 
-def diffinder(seq_seq,position,name_seq,head):
-    '''Fun fo detect dif betwen aln
-    '''
-    ref_seq = seq_seq[0]#!reference sequence for compare  
-    pos_vcf = int(position[0][0]) #- 1#reference start position
-    name_bin_dict = {x: "NA" for x in head}
-    
-
-    for sym_num in range(len(ref_seq)):
-        
-        sym_eq = sym_num
-        alt = set()#set alt variance
-        alt_dict = dict()
-        var_bin = list()
-        var_bin_dict = dict()
-        alt_num = 0
-
-        if ref_seq[sym_num] != '-':
-                #print(ref_seq[sym_num])                
-                pos_vcf += 1
-        for seq_num,name in zip(range(len(seq_seq)),name_seq):
-            #print(name)
-            seq = seq_seq[seq_num]  #!Letter, for more clarity code 
-
-            if ref_seq[sym_num] == seq[sym_num]:
-
-                alt_dict[ref_seq[sym_num]] = 0
-                var_bin.append(alt_dict[seq[sym_num]])
-                #var_bin_dict[name] = alt_dict[seq[sym_num]]
-                name_bin_dict[name] = str(alt_dict[seq[sym_num]])
-
-                #var_bin.append(0)                
-            else:
-                alt.add(seq[sym_num])#set alt variance
-                
-                if seq[sym_num] not in alt_dict:
-                    alt_num += 1
-                    alt_dict[seq[sym_num]] = alt_num
-
-                var_bin.append(alt_dict[seq[sym_num]])
-                #var_bin_dict[name] = alt_dict[seq[sym_num]]
-                name_bin_dict[name] = str(alt_dict[seq[sym_num]])
-
-        if len(alt) == 1:
-            sym_eq = sym_num
-        else:
-            #sym_dif += [sym_num]
-            pass
-        #under function maybe
-        if len(alt) != 0:
-
-            columns_name =['#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT']
-            name_bin = '\t'.join(list(name_bin_dict.values()))
-            columns_name_dif =['#CHROM',str(pos_vcf),'ID',ref_seq[sym_num],','.join(list(alt_dict)[1:]),'QUAL','FILTER','INFO','FORMAT',name_bin]
-            columns_name_dif = '\t'.join(columns_name_dif)
-            columns_name_dif += '\n'
-            with open(name_vcf,'a') as file_vcf:
-                file_vcf.write(columns_name_dif)
-
-            yield pos_vcf,ref_seq[sym_num],alt,alt_dict,var_bin,name_bin_dict,columns_name_dif
-            #yield 
-
-
-
-
-def diffinder2(seq_seq):
+def diffinder(seq_seq):
     #req add position parametr if need break loop through equal symbol
     sym_seq_start = 'blank'
     sym_seq_end = ''
     sym_num_start = 0
-    #sym_seq_end_last = ''
-    #sym_num_end_last = 0
     sym_seq_lst = list()
     ref_pos = int(pos_set[0][0][0])
     ref_seq = seq_seq[0]#!reference sequence for compare  
-    pos_vcf = 0
-
+    pos_vcf = -1
+    start_pos = ref_pos
+    first_flag = True
     for sym_num,sym_seq in enumerate(zip(*seq_seq)):
-        #sym_num += 1
-        #start_pos = ref_pos + sym_num
 
         if ref_seq[sym_num] != '-':
-                #print(ref_seq[sym_num])                
                 pos_vcf += 1
 
-        #print('sym_seq_lst for',sym_seq_lst,sym_seq,sym_num)
-        if len(set(sym_seq)) > 1:#input in loop if alternative exist       
-            #print(set(sym_seq),sym_num)
+        if len(set(sym_seq)) > 1:#input in loop if alternative exist
             sym_seq_end = sym_seq
             sym_num_end = sym_num
             sym_seq_lst += [list(sym_seq)]
-            #print('sym_seq_lst',sym_seq_lst)
-            #start_pos = ref_pos + sym_num_start
+
+            if first_flag:
+                start_pos = ref_pos + pos_vcf
+                first_flag = False
 
         elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0:#here break
-            #print('elif')
-            #if sym_seq_start != 'blank':#add reference sym to list
-                    #sym_seq_lst.append(list(sym_seq_start))
             sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
-                    #[list(sym_seq_start)].append(sym_seq_lst)
-            #start_pos = ref_pos + sym_num_start
 
-            #print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
-                #'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n',
-                #file='asd')         
-            with open('out.txt', 'a') as f:
-                print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
-                'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n',
-                file=f)#!for log
-            #print('sym_seq_lst elif',sym_seq_lst)
             yield start_pos,sym_seq_lst
 
-            #sym_seq_end_last = sym_seq_end
-            #sym_num_end_last = sym_num_end
-
+            first_flag = True
             sym_num_start = sym_num
-
             sym_seq_start = sym_seq
             sym_seq_lst = []
-            start_pos = ref_pos + pos_vcf
+
         else:
             sym_seq_start = sym_seq
-            start_pos = ref_pos + pos_vcf#!here
-            
         
-
-        '''elif len(set(sym_seq)) <= 1:
-            print('else')
-            sym_num_start = sym_num
-            sym_seq_start = sym_seq
-            sym_seq_lst = []
-
-        elif sym_seq_end != sym_seq_end_last: #and sym_num_end != sym_num_end_last:#and len(set(sym_seq)) <= 1:
-
-        #else:#если равны
-            print('elif')
-            if sym_seq_start != 'blank':#add reference sym to list
-                    #sym_seq_lst.append(list(sym_seq_start))
-                    sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
-                    #[list(sym_seq_start)].append(sym_seq_lst)
-            start_pos = ref_pos + sym_num_start
-            #print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
-                #'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n',
-                #file='asd')         
-            with open('out.txt', 'a') as f:
-                print('return','start_seq=',sym_seq_start,'\n','start_num',ref_pos + sym_num_start,'\n',
-                'end_num=',ref_pos + sym_num_end,'\n','seq_end=',sym_seq_end,'\n','seq_lst=',sym_seq_lst,end='\n',
-                file=f)#!for log
-            print('sym_seq_lst elif',sym_seq_lst)
-            yield start_pos,sym_seq_lst
-
-            sym_seq_end_last = sym_seq_end
-            sym_num_end_last = sym_num_end
-
-
-        else:
-            print('else')
-            sym_num_start = sym_num
-            sym_seq_start = sym_seq
-            sym_seq_lst = []'''
-
-
 def join(massive_str):
     massive_list = []
     for one_str in massive_str:
@@ -291,8 +167,6 @@ def join(massive_str):
     return massive_list
 
 def dif_process(seq_lst,position):
-    #seq_lst= [['t', 't', 't', 't', 't', 't'], ['-', 'c', 'c', 'c', 'c', 'c'], ['-', 't', 't', 't', 't', 't'], ['-', 't', 't', 't', 't', 't']]
-
     variance_bin_dict = dict()
 
     name_str_dict = {x: "NA" for x in id_nameseq_dict_val}
@@ -314,7 +188,6 @@ def dif_process(seq_lst,position):
             alt_variance_set.add(variance)
             alt_variance_dict[variance] = str(alt_num)
             alt_num += 1
-    #alt_variance_set = set(variance_lst[1:])
 
     for variance_n in range(len(variance_lst)):
         name_str_dict[pos_set[1][variance_n]] = variance_lst[variance_n]
@@ -323,22 +196,13 @@ def dif_process(seq_lst,position):
         if name_str_dict[name] != 'NA':
             name_str_dict[name] = alt_variance_dict[name_str_dict[name]]
     
-    
-    #for alt in alt_variance_dict.keys():
-        #print('alt',alt)
-    #print(len(set(map(len,list(alt_variance_dict.keys())))) == 1)#equal size dif always must true
-        #pass
-
     #for SNP
     alt_variance_dict_n = {}
 
-    #len(list(alt_variance_dict.keys())[0]) == 2
-    if any(len(s) == 2 for s in list(alt_variance_dict.keys())) and all('-' not in s for s in list(alt_variance_dict.keys())):        
+    if all(len(s) == 2 for s in list(alt_variance_dict.keys())) and all('-' not in s for s in list(alt_variance_dict.keys())):        
         for alt_key,alt_val in alt_variance_dict.items():
             alt_variance_dict_n[alt_key[1:]] = alt_val
         position += 1
-
-        #print('alt_variance_dict',alt_variance_dict_n,alt_variance_dict)
         return name_str_dict,alt_variance_dict_n,position
     
     dash_logic = False
@@ -347,44 +211,23 @@ def dif_process(seq_lst,position):
             alt_variance_dict_n[alt_key.replace('-','')] = alt_val
         return name_str_dict,alt_variance_dict_n,position
 
-    #print()
-    #print(name_str_dict)
-    #print(alt_variance_dict)
-    #print('ref',reference_variance)
     return name_str_dict,alt_variance_dict,position
 
+
+
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
-    #print(title_seq,seq_seq)
     pos_set = parser_title(title_seq)
-    #stat = diffinder(seq_seq,pos[1])
-    #for i in diffinder(seq_seq,pos_set[0],pos_set[1],id_nameseq_dict_val):
-    #   pass
 
-        #print(pos_set)
-    for dif_set in diffinder2(seq_seq):
-        #print(dif_set[0],'==',dif_set[1])
-
+    for dif_set in diffinder(seq_seq):
         name_str_dict,alt_variance_dict,position = dif_process(dif_set[1],dif_set[0])
+
         bin_var = '\t'.join(name_str_dict.values())
-        #print(dif_set[0],list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]))
-        #columns_vcf = dif_set[0],list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:])
         columns_vcf =['#CHROM',str(position),'ID',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
             'QUAL','FILTER','INFO','GT',bin_var]
         columns_vcf = '\t'.join(columns_vcf)
         columns_vcf+='\n'
-        #print(columns_vcf)
         with open(name_vcf,'a') as file_vcf:
                 file_vcf.write(columns_vcf)
 
 
-#seq_seq[3][79:83]
-#seq_seq[0][79:83]
-'''w = join(seq_lst)
-list(zip(*w))
-list(zip(*seq_lst))
-join(list(zip(*w)))
-join(list(zip(*seq_lst)))#!alt var
-set((list(zip(*seq_lst))))
-set((zip(*seq_lst)))
-set(w)'''
 print('end')
