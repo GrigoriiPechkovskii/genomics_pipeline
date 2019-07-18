@@ -1,4 +1,8 @@
 #By Grigorii Pechkovskii
+'''
+Check ext with blank alt
+Check positioins shift 1
+'''
 print('start')
 
 import re
@@ -10,8 +14,9 @@ import os
 files = os.listdir()
 directory = os.getcwd()
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
-name_vcf = 'test_mini.vcf'
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
+name_vcf = 'test_mini2.vcf'
 
 file_xmfa = open(directory_file_xmfa)
 
@@ -170,7 +175,6 @@ def dif_process(seq_lst,position):
     variance_bin_dict = dict()
 
     name_str_dict = {x: "NA" for x in id_nameseq_dict_val}
-    pos_set[1]
     variance_lst = join(list((zip(*seq_lst))))
     variance_set = set((zip(*seq_lst)))
 
@@ -205,7 +209,7 @@ def dif_process(seq_lst,position):
         position += 1
         return name_str_dict,alt_variance_dict_n,position
     
-    dash_logic = False
+    dash_logic = True
     if dash_logic:
         for alt_key,alt_val in alt_variance_dict.items():
             alt_variance_dict_n[alt_key.replace('-','')] = alt_val
@@ -215,19 +219,58 @@ def dif_process(seq_lst,position):
 
 
 
+file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
+
+def contig_finder_gbk(file_gbk_dir):
+    ''' '''
+    with open(file_gbk) as file_gbk_opened:
+        file_gbk_read = file_gbk_opened.read()
+        find_locus = re.findall(r'LOCUS\s+(.*?)\s\s+',file_gbk_read)
+        find_source = re.findall(r'\s\s+source\s+(.*?)\s\s+',file_gbk_read)
+
+    find_source = [[*map(int,(i.split('..')))] for i in find_source]
+    find_source_real = find_source.copy()
+    for source_num in range(1,len(find_source)):
+        find_source[source_num] = [find_source[source_num][0] + find_source[source_num-1][1],
+                                   find_source[source_num][1] + find_source[source_num-1][1]]
+    return find_locus, find_source,find_source_real
+
+find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
+
+def contig_definder(position,find_locus,find_source): 
+    ''' ''' 
+    for locus,source in zip(find_locus,find_source):
+        if (source[0] <= position <= source[1]):
+            position_real = position - source[0]+ 1
+            return locus,position_real
+
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
+    if pos_set[1][0]!= 'AmesAncestor_GCF_000008445.1':
+        print('if')
+        continue
+        
+    else:
+        #print('else')
+        for dif_set in diffinder(seq_seq):
+            name_str_dict,alt_variance_dict,position = dif_process(dif_set[1],dif_set[0])
 
-    for dif_set in diffinder(seq_seq):
-        name_str_dict,alt_variance_dict,position = dif_process(dif_set[1],dif_set[0])
+            bin_var = '\t'.join(name_str_dict.values())
 
-        bin_var = '\t'.join(name_str_dict.values())
-        columns_vcf =['#CHROM',str(position),'ID',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-            'QUAL','FILTER','INFO','GT',bin_var]
-        columns_vcf = '\t'.join(columns_vcf)
-        columns_vcf+='\n'
-        with open(name_vcf,'a') as file_vcf:
-                file_vcf.write(columns_vcf)
+            contig,position_real = contig_definder(position,find_locus,find_source)
 
+            columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+                '40','PASS','NA','GT',bin_var]
+            columns_vcf = '\t'.join(columns_vcf)
+            columns_vcf+='\n'
+            with open(name_vcf,'a') as file_vcf:
+                    file_vcf.write(columns_vcf)
+
+
+
+
+#position = 1000
+#q = contig_definder(position,find_locus,find_source)
 
 print('end')
+
