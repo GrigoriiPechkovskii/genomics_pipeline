@@ -1,22 +1,32 @@
 #By Grigorii Pechkovskii
 '''
-Check ext with blank alt
+Check ext with blank alt - fixed, its maybe inversion, out with warning string
 Check positioins shift 1
+Extra letters - !its blank word
+Loging
+Sorting - fixed
+Reference genome must be flexible
+Full blank block (-Mauve)
+add N letters
+!!!ERORR bin
 '''
 print('start')
 
 import re
 import os
 
+import numpy as np
+import pandas as pd
 #import linecache
 #import tokenize
 
 files = os.listdir()
 directory = os.getcwd()
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
-name_vcf = 'test_mini2.vcf'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
+directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
+name_vcf = 'test_mini.vcf'
 
 file_xmfa = open(directory_file_xmfa)
 
@@ -152,7 +162,7 @@ def diffinder(seq_seq):
                 start_pos = ref_pos + pos_vcf
                 first_flag = False
 
-        elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0:#here break
+        elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0 and sym_seq_start!='blank':#here break
             sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
 
             yield start_pos,sym_seq_lst
@@ -171,10 +181,11 @@ def join(massive_str):
         massive_list.append(''.join(list(one_str)))
     return massive_list
 
+
 def dif_process(seq_lst,position):
     variance_bin_dict = dict()
-
-    name_str_dict = {x: "NA" for x in id_nameseq_dict_val}
+    info = 'NANinfo'
+    name_str_dict = {x: "NAN" for x in id_nameseq_dict_val}
     variance_lst = join(list((zip(*seq_lst))))
     variance_set = set((zip(*seq_lst)))
 
@@ -197,27 +208,37 @@ def dif_process(seq_lst,position):
         name_str_dict[pos_set[1][variance_n]] = variance_lst[variance_n]
 
     for name in name_str_dict:
-        if name_str_dict[name] != 'NA':
+        if name_str_dict[name] != 'NAN':
             name_str_dict[name] = alt_variance_dict[name_str_dict[name]]
-    
+  
     #for SNP
-    alt_variance_dict_n = {}
 
+    alt_variance_dict_n = {}
+    #print(alt_variance_dict)
     if all(len(s) == 2 for s in list(alt_variance_dict.keys())) and all('-' not in s for s in list(alt_variance_dict.keys())):        
         for alt_key,alt_val in alt_variance_dict.items():
             alt_variance_dict_n[alt_key[1:]] = alt_val
         position += 1
-        return name_str_dict,alt_variance_dict_n,position
+        return name_str_dict,alt_variance_dict_n,position,info  
+
     
+
     dash_logic = True
+    alt_variance_dict_r = {j:i for i,j in alt_variance_dict.items()}#rearrangement dict  
+
     if dash_logic:
         for alt_key,alt_val in alt_variance_dict.items():
             alt_variance_dict_n[alt_key.replace('-','')] = alt_val
-        return name_str_dict,alt_variance_dict_n,position
 
-    return name_str_dict,alt_variance_dict,position
+        if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):
+            info = 'WARNING maybe wrong alignment'
+            print('WARNING maybe wrong alignment')
+            #print(position_real)
+            #print(alt_variance_dict_n)
+            return name_str_dict,alt_variance_dict_n,position,info
+        return name_str_dict,alt_variance_dict_n,position,info
 
-
+    return name_str_dict,alt_variance_dict,position,info#!maybe not
 
 file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
 
@@ -246,31 +267,35 @@ def contig_definder(position,find_locus,find_source):
 
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
-    if pos_set[1][0]!= 'AmesAncestor_GCF_000008445.1':
-        print('if')
+    #if pos_set[1][0]!= 'AmesAncestor_GCF_000008445.1':
+    if pos_set[1][0]!= 'GCF_000008445.1_ASM844v1_genomic':
+        print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
+        print(title_seq)
         continue
         
     else:
         #print('else')
         for dif_set in diffinder(seq_seq):
-            name_str_dict,alt_variance_dict,position = dif_process(dif_set[1],dif_set[0])
-
+            name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0])
+            #print(name_str_dict)
             bin_var = '\t'.join(name_str_dict.values())
-
+            #print(bin_var)
+            
             contig,position_real = contig_definder(position,find_locus,find_source)
 
             columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-                '40','PASS','NA','GT',bin_var]
+                '40','PASS',info,'GT',bin_var]
+            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
+            #    '40','PASS',info,'GT',bin_var]#2
             columns_vcf = '\t'.join(columns_vcf)
             columns_vcf+='\n'
             with open(name_vcf,'a') as file_vcf:
                     file_vcf.write(columns_vcf)
 
-
-
-
-#position = 1000
-#q = contig_definder(position,find_locus,find_source)
+#sorting
+df_vcf = pd.read_csv(name_vcf,sep='\t')
+df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
+df_vcf.to_csv(name_vcf,sep='\t',index=False)
 
 print('end')
 
