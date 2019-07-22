@@ -8,7 +8,13 @@ Sorting - fixed
 Reference genome must be flexible
 Full blank block (-Mauve)
 add N letters
-!!!ERORR bin
+write test position between original fasta and alignment
+pars parsnp head
+
+Shift exist in parsnp del first nuc and indexing realy start from 2 
+in  mauve xmfa rightly indexing but snp exctracting with no right shift to
+!!here miracle
+error in variance maybe
 '''
 print('start')
 
@@ -24,30 +30,55 @@ files = os.listdir()
 directory = os.getcwd()
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
 directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
-name_vcf = 'test_mini.vcf'
+#directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
 
-file_xmfa = open(directory_file_xmfa)
+name_vcf = 'test_mini_GI_AAJ_out1.vcf'
+index_type = 'mauve'
+#file_xmfa = open(directory_file_xmfa)
 
-def get_mauve_index(file_xmfa):
-    '''Iter on xmfa header with #
+def get_index(directory_file_xmfa,index_type):
+    '''Iter on xmfa header(mauve format) with #
         and return dict with id(key) and name genome(values)
     '''
+    file_xmfa = open(directory_file_xmfa)
     id_nameseq_dict = dict()
-    for file_line in file_xmfa:
-        #FormatVersion Mauve1
-        if '#' in file_line:
-            find = re.search(r'Sequence(\d*)File\t(.*)\.',file_line)
+
+    if index_type == 'mauve':
+        for file_line in file_xmfa:
+            if '#' in file_line:
+                find = re.search(r'Sequence(\d*)File\t(.*)\.',file_line)
+            else:
+                break
             if find != None:
                 id_nameseq_dict[find.group(1)] = os.path.basename(find.group(2))
-        #if '>' in file_line:
-        else:
-            break
+
+    if index_type == 'parsnp':
+        find_id_lst = []
+        find_genome_lst = []
+        for file_line in file_xmfa:
+            if '#' in file_line:
+                find_id = re.search(r'SequenceIndex\s(\d*)',file_line)
+                find_genome = re.search(r'SequenceFile\s(\w*)\.',file_line)
+            else:
+                id_nameseq_dict = dict(zip(find_id_lst,find_genome_lst))
+                break
+
+            if find_id != None:
+                find_id_lst.append(find_id.group(1))
+            if find_genome != None:
+                find_genome_lst.append(find_genome.group(1))
+
+            #if '>' in file_line:
+
+                    
     file_xmfa.close()
     return id_nameseq_dict
 
-id_nameseq_dict = get_mauve_index(file_xmfa)
+
+id_nameseq_dict = get_index(directory_file_xmfa,index_type)
 id_nameseq_dict_val = list(id_nameseq_dict.values())
 
 def head_vcf(name_seq:list):
@@ -145,7 +176,7 @@ def diffinder(seq_seq):
     sym_seq_lst = list()
     ref_pos = int(pos_set[0][0][0])
     ref_seq = seq_seq[0]#!reference sequence for compare  
-    pos_vcf = -1
+    pos_vcf = -2
     start_pos = ref_pos
     first_flag = True
     for sym_num,sym_seq in enumerate(zip(*seq_seq)):
@@ -219,10 +250,11 @@ def dif_process(seq_lst,position):
         for alt_key,alt_val in alt_variance_dict.items():
             alt_variance_dict_n[alt_key[1:]] = alt_val
         position += 1
+        info = 'snp'
         return name_str_dict,alt_variance_dict_n,position,info  
 
     
-
+    #!attention with dict maybe bag
     dash_logic = True
     alt_variance_dict_r = {j:i for i,j in alt_variance_dict.items()}#rearrangement dict  
 
@@ -265,15 +297,36 @@ def contig_definder(position,find_locus,find_source):
             position_real = position - source[0]+ 1
             return locus,position_real
 
+file_genome = 'AmesAncestor_GCF_0000084451.fna'
+file_genome_opened = open(file_genome)
+file_genome_read = ''
+for line in file_genome_opened:
+    if '>' not in line:
+        file_genome_read += line.strip()
+file_genome_opened.close()
+
+'''int(pos_set[0][0][1])
+int(pos_set[0][0][0])
+len(file_genome_read[start-1:end].replace('-',''))
+file_genome_read[start:end+1].replace('-','') == seq_seq[0]'''
+
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
     #if pos_set[1][0]!= 'AmesAncestor_GCF_000008445.1':
-    if pos_set[1][0]!= 'GCF_000008445.1_ASM844v1_genomic':
+    #if pos_set[1][0]!= 'AmesAncestor_GCF_0000084451':
+    if pos_set[1][0]!= 'GCF_000008445.1_ASM844v1_genomic':#GI_AAJ_out1
         print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
         print(title_seq)
         continue
         
     else:
+        start = int(pos_set[0][0][0])
+        end = int(pos_set[0][0][1])
+        with open('log_pos_m.txt','a') as log_pos:
+            print(file_genome_read[start-1:end] == seq_seq[0].replace('-',''),'\n',
+                  len(file_genome_read[start:end+1]),'\n',
+                  len(seq_seq[0].replace('-','')),'\n',
+                  file=log_pos)
         #print('else')
         for dif_set in diffinder(seq_seq):
             name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0])
