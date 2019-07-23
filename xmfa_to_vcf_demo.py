@@ -13,6 +13,7 @@ pars parsnp head
 
 Shift exist in parsnp del first nuc and indexing realy start from 2 
 in  mauve xmfa rightly indexing but snp exctracting with no right shift to
+bug in positioin exist 163620  234586 
 !!here miracle
 error in variance maybe
 '''
@@ -31,12 +32,13 @@ directory = os.getcwd()
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
 directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
 
-name_vcf = 'test_mini_GI_AAJ_out1.vcf'
-index_type = 'mauve'
+name_vcf = 'GI_AAJ_3_core.vcf'
+name_vcf_simple = 'GI_AAJ_3_core_simpleN.vcf'
+index_type = 'parsnp'
 #file_xmfa = open(directory_file_xmfa)
 
 def get_index(directory_file_xmfa,index_type):
@@ -60,9 +62,10 @@ def get_index(directory_file_xmfa,index_type):
         find_genome_lst = []
         for file_line in file_xmfa:
             if '#' in file_line:
+                #print(id_nameseq_dict)
                 find_id = re.search(r'SequenceIndex\s(\d*)',file_line)
-                find_genome = re.search(r'SequenceFile\s(\w*)\.',file_line)
-            else:
+                find_genome = re.search(r'SequenceFile\s(.*)\.',file_line)#!\w replace .
+            else:                
                 id_nameseq_dict = dict(zip(find_id_lst,find_genome_lst))
                 break
 
@@ -176,7 +179,7 @@ def diffinder(seq_seq):
     sym_seq_lst = list()
     ref_pos = int(pos_set[0][0][0])
     ref_seq = seq_seq[0]#!reference sequence for compare  
-    pos_vcf = -2
+    pos_vcf = -1
     start_pos = ref_pos
     first_flag = True
     for sym_num,sym_seq in enumerate(zip(*seq_seq)):
@@ -224,8 +227,11 @@ def dif_process(seq_lst,position):
     alt_variance_dict = dict()
     if len(variance_lst)>0:
         reference_variance = variance_lst[0] #define reference
+
     alt_num = 1
     alt_variance_dict[reference_variance] = '0'
+    #alt_variance_dict['0'] = reference_variance
+
     alt_variance_set.add(reference_variance)
 
     for variance in variance_lst[1:]:
@@ -243,7 +249,6 @@ def dif_process(seq_lst,position):
             name_str_dict[name] = alt_variance_dict[name_str_dict[name]]
   
     #for SNP
-
     alt_variance_dict_n = {}
     #print(alt_variance_dict)
     if all(len(s) == 2 for s in list(alt_variance_dict.keys())) and all('-' not in s for s in list(alt_variance_dict.keys())):        
@@ -251,26 +256,30 @@ def dif_process(seq_lst,position):
             alt_variance_dict_n[alt_key[1:]] = alt_val
         position += 1
         info = 'snp'
-        return name_str_dict,alt_variance_dict_n,position,info  
-
+        return name_str_dict,alt_variance_dict_n,position,info 
     
     #!attention with dict maybe bag
     dash_logic = True
-    alt_variance_dict_r = {j:i for i,j in alt_variance_dict.items()}#rearrangement dict  
 
     if dash_logic:
-        for alt_key,alt_val in alt_variance_dict.items():
-            alt_variance_dict_n[alt_key.replace('-','')] = alt_val
+        alt_variance_dict_r = {j:i.replace('-','') for i,j in alt_variance_dict.items()}#rearrangement dict  
+        alt_variance_dict_n = {i.replace('-',''):j for i,j in alt_variance_dict.items()}
+        #for alt_key,alt_val in alt_variance_dict_r.items():
+            
+            #alt_variance_dict_n[alt_key] = alt_val.replace('-','')
+            #alt_variance_dict_r[alt_val.replace('-','')] = alt_key
 
-        if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):
+
+        if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):           
+
             info = 'WARNING maybe wrong alignment'
             print('WARNING maybe wrong alignment')
-            #print(position_real)
-            #print(alt_variance_dict_n)
+
             return name_str_dict,alt_variance_dict_n,position,info
         return name_str_dict,alt_variance_dict_n,position,info
 
     return name_str_dict,alt_variance_dict,position,info#!maybe not
+
 
 file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
 
@@ -314,9 +323,10 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
     #if pos_set[1][0]!= 'AmesAncestor_GCF_000008445.1':
     #if pos_set[1][0]!= 'AmesAncestor_GCF_0000084451':
-    if pos_set[1][0]!= 'GCF_000008445.1_ASM844v1_genomic':#GI_AAJ_out1
-        print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
-        print(title_seq)
+    #if pos_set[1][0]!= 'GCF_000008445.1_ASM844v1_genomic':#GI_AAJ_out1
+    if pos_set[1][0]!= 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna':
+        #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
+        #print(title_seq)
         continue
         
     else:
@@ -331,13 +341,19 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
         for dif_set in diffinder(seq_seq):
             name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0])
             #print(name_str_dict)
+            with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
+                print(info,alt_variance_dict,file=alt_variance_dict_file)
             bin_var = '\t'.join(name_str_dict.values())
             #print(bin_var)
             
             contig,position_real = contig_definder(position,find_locus,find_source)
 
-            columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            #columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            #    '40','PASS',info,'GT',bin_var]
+
+            columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
                 '40','PASS',info,'GT',bin_var]
+
             #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
             #    '40','PASS',info,'GT',bin_var]#2
             columns_vcf = '\t'.join(columns_vcf)
@@ -349,6 +365,8 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
 df_vcf = pd.read_csv(name_vcf,sep='\t')
 df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
 df_vcf.to_csv(name_vcf,sep='\t',index=False)
+
+df_vcf[df_vcf['INFO']!='WARNING maybe wrong alignment'].to_csv(name_vcf_simple,sep='\t',index=False)
 
 print('end')
 
