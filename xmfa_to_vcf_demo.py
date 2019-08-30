@@ -1,22 +1,14 @@
 #By Grigorii Pechkovskii
 '''
 Check ext with blank alt - fixed, its maybe inversion, out with warning string
-Check positioins shift 1
-Extra letters - !its blank word
 Loging
-Sorting - fixed
 Reference genome must be flexible
-Full blank block (-Mauve)
-add N letters
+N letters
 write test position between original fasta and alignment
-pars parsnp head
 
-Shift exist in parsnp del first nuc and indexing realy start from 2 
-in  mauve xmfa rightly indexing but snp exctracting with no right shift to
-bug in positioin exist 163620  234586 
-!!here miracle
-error in variance maybe
-dont searsch last letter in contig
+#!bug in l Warning Exception snr start with snp 994529 252142 252136 {'T', 'G'}
+#!bug reapet can over position each other
+#mod test please
 '''
 print('start')
 
@@ -25,8 +17,6 @@ import os
 
 import numpy as np
 import pandas as pd
-#import linecache
-#import tokenize
 
 files = os.listdir()
 directory = os.getcwd()
@@ -37,10 +27,17 @@ directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
 
-name_vcf = 'test_mini.vcf'
-name_vcf_simple = 'test_mini_sim.vcf'
+name_vcf = 'test_mini_1.vcf'
+name_vcf_simple = 'test_mini__1_sim.vcf'
 index_type = 'mauve'
 #file_xmfa = open(directory_file_xmfa)
+
+if index_type == 'parsnp':    
+    pos_vcf = 1
+    pos_minus = 1
+elif index_type == 'mauve':
+    pos_vcf = 0
+    pos_minus = 2
 
  
 REF = 'AmesAncestor_GCF_000008445.1'
@@ -178,59 +175,223 @@ def parser_title(title_seq:list):
     return pos,name_idseq
 
 
-def diffinder(seq_seq):
-    #req add position parametr if need break loop through equal symbol
-    sym_seq_start = 'blank'
-    #sym_seq_end = ''
-    sym_num_start = 0
-    sym_seq_lst = list()
-    ref_pos = int(pos_set[0][0][0])
-    ref_seq = seq_seq[0]#!reference sequence for compare  
-    pos_vcf = 0
-    start_pos = ref_pos
-    first_flag = True
-    for sym_num,sym_seq in enumerate(zip(*seq_seq)):
-
-        if ref_seq[sym_num] != '-':
-                pos_vcf += 1
-
-        if len(set(sym_seq)) > 1:#input in loop if alternative exist
-            sym_seq_lst += [list(sym_seq)]
-
-            if first_flag:
-                start_pos = ref_pos + pos_vcf - 1
-                first_flag = False
-                null_pos = sym_num
-
-        elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0:# and sym_seq_start!='blank':#here break
-            if null_pos == 0:
-                sym_seq_lst = [len(seq_seq)*['O']] + sym_seq_lst
-                null_pos= sym_num
-
-            else:
-                sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
-            yield start_pos,sym_seq_lst
-
-            sym_seq_lst = []
-            start_pos = ref_pos + pos_vcf - 1
-            sym_seq_start = sym_seq            
-
-        else:
-            sym_seq_start = sym_seq
-            start_pos = ref_pos + pos_vcf - 1
-        
-def join(massive_str):
+def join_dif(massive_str):
     massive_list = []
     for one_str in massive_str:
         massive_list.append(''.join(list(one_str)))
     return massive_list
 
 
-def dif_process(seq_lst,position):
-    variance_bin_dict = dict()
+def snr_diffinder2(sym_num,start_pos,sym_seq_lst,info):
+    
+    ref_pos = int(pos_set[0][0][0])
+
+    info_flag = False
+
+    join_dif(sym_seq_lst[1])
+
+    sym_seq_lst[1:]
+    alt_set_tmp = set()
+    any(list((s==['-']*len(s) for s in sym_seq_lst[1:])))
+    
+    list((alt_set_tmp.update(set(s)) for s in sym_seq_lst[1:]))
+    ref_seq = seq_seq[0]
+    #if len(sym_seq_lst) == 2 and '-' in sym_seq_lst[1] and all([len(set(s))==2 for s in sym_seq_lst[1:]]): #len(set(sym_seq_lst[1])) == 2:# any('-' in s for s in sym_seq_lst[1]):
+    
+    if any('-' in s for s in sym_seq_lst) and len(alt_set_tmp) == 2:
+        #print(sym_seq_lst)
+        if any([s == tuple('-')*len(sym_seq_lst[1:]) for s in zip(*sym_seq_lst[1:])]):
+            print(sym_seq_lst)
+
+        info  = 'SNR'
+        uniq_let_lst = [i for i in sym_seq_lst[1] if i!='-']
+        uniq_let_set = set(uniq_let_lst)
+        uniq_let = uniq_let_lst[0]
+
+
+        uniq_lst_right=[]
+        for right_ind in range(sym_num,len(ref_seq)-1):
+            if all([(seq[right_ind]==uniq_let or seq[right_ind]=='-' )for seq in seq_seq]):#!!!ex if break in snp
+                uniq_lst_right.append([uniq_let]*len(seq_seq))
+            else:   
+                break
+        if len(set([seq[right_ind] for seq in seq_seq]))>1:
+                    print('r Warning Exception snr ended with snp',start_pos)
+
+
+        uniq_lst_left=[]
+        for left_ind in range(sym_num-2,0,-1):
+            if all([(seq[left_ind]==uniq_let or seq[left_ind]=='-' )for seq in seq_seq]):#!!!ex if break in snp
+                uniq_lst_left.append([uniq_let]*len(seq_seq))
+            else:
+                break
+        left_end = [ref_seq[left_ind]]*len(seq_seq)
+        left_end_pos = left_ind
+        if len(set([seq[left_ind] for seq in seq_seq]))>1:
+                    print('l Warning Exception snr start with snp',start_pos,sym_num-2,left_ind,set([seq[left_ind] for seq in seq_seq]))
+
+
+        sym_seq_lst = [left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right
+        start_pos = left_end_pos + ref_pos
+
+
+    return start_pos,sym_seq_lst,info
+
+def tandem_check(list_nuc_strings:list):
+    '''Get list of strings
+       return list of min tandam repeat'''
+    list_tandem = []
+
+    for nuc_string in set(list_nuc_strings):
+
+        result = re.findall(r'(\w+?)\1+', nuc_string)
+        if '-' not in nuc_string:            
+
+            if len(result) != 0:
+                for s in result:
+                    if nuc_string.replace(s,'') == '':
+                        list_tandem.append(s)
+                    else:
+                        list_tandem.append(nuc_string)
+
+            
+
+            elif len(result) == 0:
+                list_tandem.append(nuc_string)
+
+    if len(set(list_tandem)) == 1:
+
+        #print('tandem',list_tandem[0])
+        return list_tandem[0]
+    else:
+        #print('Warning in func tandem_check not 1 alt tandem repeat',list_tandem)
+        pass
+        #return list_tandem[0]#!return complex uniq_let
+            
+
+
+def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
+    
+    ref_pos = int(pos_set[0][0][0])
+
+    info_flag = False
+    pos_shift = -1
+    join_dif(sym_seq_lst[1])
+
+    sym_seq_lst[1:]
+    alt_set_tmp = set()
+    any(list((s==['-']*len(s) for s in sym_seq_lst[1:])))
+    
+    list((alt_set_tmp.update(set(s)) for s in sym_seq_lst[1:]))
+    ref_seq = seq_seq[0]
+    
+    if any([s == tuple('-')*len(sym_seq_lst[1:]) for s in zip(*sym_seq_lst[1:])]):
+        uniq_let = tandem_check(join_dif(zip(*sym_seq_lst[1:])))
+        if uniq_let == None:
+            info = 'ComplexIndel'
+            return start_pos,sym_seq_lst,info
+        
+        uniq_lst_right=[]
+        for right_ind_start,right_ind_end in zip(range(sym_num+len(uniq_let),len(ref_seq)-1,len(uniq_let)),range(sym_num+len(uniq_let)*2,len(ref_seq)-1,len(uniq_let))):
+            if all([(seq[right_ind_start:right_ind_end]==uniq_let or seq[right_ind_start:right_ind_end]=='-'*len(uniq_let) )for seq in seq_seq]):#!!!ex if break in snp
+                uniq_lst_right.append([uniq_let]*len(seq_seq))
+                #info  = 'SNR'
+                if len(uniq_let) == 1:
+                    info = 'snr'
+                else:
+                     info = 'repeat'
+            else:
+                if len(set([seq[right_ind_start] for seq in seq_seq]))>1:
+                    print('r Warning Exception snr ended with snp',start_pos)
+                break
+        
+        uniq_lst_left=[]
+        #left_end = [ref_seq[sym_num-1]]*len(seq_seq)
+        for left_ind_start,left_ind_end in zip(range(sym_num,0,-len(uniq_let)),range(sym_num-len(uniq_let),0,-len(uniq_let))):
+            #[(print(seq[left_ind_end:left_ind_start],uniq_let,'-'*len(uniq_let),seq[left_ind_end:left_ind_start]==uniq_let,seq[left_ind_end:left_ind_start]=='-'*len(uniq_let),all([(seq[left_ind_end:left_ind_start]==uniq_let or seq[left_ind_end:left_ind_start]=='-'*len(uniq_let) )for seq in seq_seq]))) for seq in seq_seq]
+            if all([(seq[left_ind_end:left_ind_start]==uniq_let or seq[left_ind_end:left_ind_start]=='-'*len(uniq_let) )for seq in seq_seq]):#!!!ex if break in snp
+                uniq_lst_left.append([uniq_let]*len(seq_seq))
+                #info  = 'SNR'
+                if len(uniq_let) == 1:
+                    info = 'snr'
+                else:
+                     info = 'repeat'
+                pos_shift += len(uniq_let)
+            else:
+                pos_shift += 1
+
+                left_end = [ref_seq[left_ind_start-1]]*len(seq_seq)
+                #left_end_pos = left_ind_start-1
+
+                if len(set([seq[left_ind_start-1] for seq in seq_seq]))>1:
+                    print('l Warning Exception snr start with snp',start_pos,sym_num,left_ind_start,set([seq[left_ind_start-1] for seq in seq_seq]))
+                break
+        else:
+            left_end = [ref_seq[sym_num-1]]*len(seq_seq)
+            pos_shift = 0
+        #left_end = [ref_seq[left_ind_start-2]]*len(seq_seq)
+        #left_end_pos = left_ind_start-2
+        
+
+        sym_seq_lst = [left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right
+        start_pos = start_pos - pos_shift
+
+    return start_pos,sym_seq_lst,info
+
+def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
+    #req add position parametr if need break loop through equal symbol
+    sym_seq_start = 'blank'
     info = 'NANinfo'
+    #sym_seq_end = ''
+    sym_num_start = 0
+    sym_seq_lst = list()
+    ref_pos = int(pos_set[0][0][0])
+    ref_seq = seq_seq[0]#!reference sequence for compare  
+    #pos_vcf = 0
+    start_pos = ref_pos
+    first_flag = True
+    rep_pos =0
+    for sym_num,sym_seq in enumerate(zip(*seq_seq)):
+        if ref_seq[sym_num] != '-':
+                pos_vcf += 1
+
+        if len(set(sym_seq)) > 1:#input in loop if alternative exist
+            sym_seq_lst += [list(sym_seq)]
+            if first_flag:
+                #start_pos = ref_pos + pos_vcf - 1
+                #rep_pos = sym_num
+                first_flag = False
+                null_pos = sym_num
+
+        elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0:# and sym_seq_start!='blank':#here break
+            if null_pos == 0:
+                sym_seq_lst = [len(seq_seq)*['O']] + sym_seq_lst
+                start_pos = ref_pos + pos_vcf - pos_minus
+                null_pos= sym_num
+
+            else:
+                sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
+
+            start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos+1,start_pos,sym_seq_lst,info)
+            
+            yield start_pos,sym_seq_lst,info
+            info = 'NANinfo'
+
+            sym_seq_lst = []
+            start_pos = ref_pos + pos_vcf - 1
+            rep_pos = sym_num
+            sym_seq_start = sym_seq            
+
+        else:
+            sym_seq_start = sym_seq
+            start_pos = ref_pos + pos_vcf - 1
+            rep_pos = sym_num
+        
+def dif_process(seq_lst,position,info='NANinfo'):
+    variance_bin_dict = dict()
+    #info = 'NANinfo'
     name_str_dict = {x: "NAN" for x in id_nameseq_dict_val}
-    variance_lst = join(list((zip(*seq_lst))))
+    variance_lst = join_dif(list((zip(*seq_lst))))
     variance_set = set((zip(*seq_lst)))
 
     alt_variance_set  = set()
@@ -259,13 +420,9 @@ def dif_process(seq_lst,position):
 
     #print(any(('N' in s for s in list(alt_variance_dict.keys()))))
     #print(list(alt_variance_dict.keys()))
-    #print(position)
-    
     
     alt_variance_dict_n = {}
-    #for SNP
-    
-    #print(alt_variance_dict)
+    #for SNP    
     if all(len(s) == 2 for s in list(alt_variance_dict.keys())) and all('-' not in s for s in list(alt_variance_dict.keys())):  
         if any('O' in s for s in list(alt_variance_dict.keys())): #for origin sequence diff
             pass
@@ -287,7 +444,6 @@ def dif_process(seq_lst,position):
             #alt_variance_dict_n[alt_key] = alt_val.replace('-','')
             #alt_variance_dict_r[alt_val.replace('-','')] = alt_key
 
-
         if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):           
 
             info = 'WARNING maybe wrong alignment'
@@ -297,7 +453,6 @@ def dif_process(seq_lst,position):
         return name_str_dict,alt_variance_dict_n,position,info
 
     return name_str_dict,alt_variance_dict,position,info#!maybe not
-
 
 file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
 
@@ -332,14 +487,9 @@ for line in file_genome_opened:
         file_genome_read += line.strip()
 file_genome_opened.close()
 
-'''int(pos_set[0][0][1])
-int(pos_set[0][0][0])
-len(file_genome_read[start-1:end].replace('-',''))
-file_genome_read[start:end+1].replace('-','') == seq_seq[0]'''
 
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
-    #print(title_seq,seq_seq)
     if pos_set[1][0]!= REF:
         #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
         #print(title_seq)
@@ -353,24 +503,20 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
                   len(file_genome_read[start:end+1]),'\n',
                   len(seq_seq[0].replace('-','')),'\n',
                   file=log_pos)
-        #print('else')
         for dif_set in diffinder(seq_seq):
             
-            name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0])
-            #print('dif_process',position)
-            #print('title_seq',title_seq)            
+            name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
             
             contig,position_real = contig_definder(position,find_locus,find_source)
             with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
                 print(info,alt_variance_dict,position,position_real,file=alt_variance_dict_file)
             bin_var = '\t'.join(name_str_dict.values())
-            #print(bin_var)
 
-            #columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-            #    '40','PASS',info,'GT',bin_var]
-
-            columns_vcf =[contig,str(position),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
                 '40','PASS',info,'GT',bin_var]
+
+            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            #    '40','PASS',info,'GT',bin_var]
 
             #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
             #    '40','PASS',info,'GT',bin_var]#2
@@ -380,6 +526,7 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
                     file_vcf.write(columns_vcf)
 
 #sorting
+
 df_vcf = pd.read_csv(name_vcf,sep='\t')
 df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
 df_vcf.to_csv(name_vcf,sep='\t',index=False)
