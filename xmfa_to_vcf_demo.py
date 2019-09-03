@@ -26,9 +26,12 @@ directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_m.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_2.xmfa'
 
-name_vcf = 'test_mini_1.vcf'
-name_vcf_simple = 'test_mini__1_sim.vcf'
+
+name_vcf = 'test_mini_mauve.vcf'
+name_vcf_simple = 'test_mauve_sim.vcf'
 index_type = 'mauve'
 #file_xmfa = open(directory_file_xmfa)
 
@@ -40,10 +43,10 @@ elif index_type == 'mauve':
     pos_minus = 2
 
  
-REF = 'AmesAncestor_GCF_000008445.1'
+REF = 'AmesAncestor_GCF_000008445.1'#test_mini
 #REF ='AmesAncestor_GCF_0000084451'
 #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
-#REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'
+#REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
 
 def get_index(directory_file_xmfa,index_type):
     '''Iter on xmfa header(mauve format) with #
@@ -276,9 +279,8 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
 
     info_flag = False
     pos_shift = -1
-    join_dif(sym_seq_lst[1])
+    #join_dif(sym_seq_lst[1])
 
-    sym_seq_lst[1:]
     alt_set_tmp = set()
     any(list((s==['-']*len(s) for s in sym_seq_lst[1:])))
     
@@ -332,7 +334,7 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
         #left_end = [ref_seq[left_ind_start-2]]*len(seq_seq)
         #left_end_pos = left_ind_start-2
         
-
+        #print('start_pos1',start_pos)
         sym_seq_lst = [left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right
         start_pos = start_pos - pos_shift
 
@@ -340,6 +342,8 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
 
 def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
     #req add position parametr if need break loop through equal symbol
+    #start_pos - ref position last equal symbol + pos vcf
+    #rep_pos - sym_num position first non equal symbol
     sym_seq_start = 'blank'
     info = 'NANinfo'
     #sym_seq_end = ''
@@ -350,30 +354,59 @@ def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
     #pos_vcf = 0
     start_pos = ref_pos
     first_flag = True
+    ref_flag = True
     rep_pos =0
     for sym_num,sym_seq in enumerate(zip(*seq_seq)):
         if ref_seq[sym_num] != '-':
-                pos_vcf += 1
-
+            pos_vcf += 1
+            #print(ref_seq[sym_num],pos_vcf,end=',')
+        #print(sym_num,len(ref_seq)-1,sym_num == len(ref_seq)-1)
+        #print('1',len(set(sym_seq)) > 1,end=',')
         if len(set(sym_seq)) > 1:#input in loop if alternative exist
+
+
             sym_seq_lst += [list(sym_seq)]
-            if first_flag:
+            
+            if ref_flag:
+                ref_flag = False
+                #start_pos = ref_pos + pos_vcf - 1
+                rep_pos = sym_num
+
+            #rep_pos = sym_num
+            #if pos_vcf == 0:
+                #first_flag = True
+
+            #if first_flag:
                 #start_pos = ref_pos + pos_vcf - 1
                 #rep_pos = sym_num
-                first_flag = False
-                null_pos = sym_num
+                #first_flag = False
+                #null_pos = sym_num
+        #print('2',(len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0) or sym_num == len(ref_seq)-1)
 
-        elif len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0:# and sym_seq_start!='blank':#here break
-            if null_pos == 0:
-                sym_seq_lst = [len(seq_seq)*['O']] + sym_seq_lst
-                start_pos = ref_pos + pos_vcf - pos_minus
-                null_pos= sym_num
+
+        if (len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0) or sym_num == len(ref_seq)-1:#here break
+            ref_flag = True
+            #print(sym_num,len(ref_seq)-1,len(set(sym_seq)) == 1,sym_seq)
+            if sym_num == len(ref_seq)-1 and (len(set(sym_seq)) == 1):
+                #print('WARNING break in diffinder')
+                break
+            if first_flag:# and seq_seq[1][0:10]:
+                first_flag = False
+                start_pos = ref_pos + pos_vcf - 2
+                if sym_num==1:
+                    if any([seq_seq[i][0:sym_num] == '-'*sym_num for i in range(len(seq_seq))]):#S.startswith(str)
+                        start_pos = ref_pos
+                        sym_seq_lst = sym_seq_lst + [list(list(zip(*seq_seq))[sym_num])]
+                        #start_pos = ref_pos
+                        print('Warning origin seq start with indel 1',start_pos)
+                elif sym_num == len(ref_seq)-1:
+                    start_pos = ref_pos
 
             else:
+                
                 sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
+            start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos,start_pos,sym_seq_lst,info)
 
-            start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos+1,start_pos,sym_seq_lst,info)
-            
             yield start_pos,sym_seq_lst,info
             info = 'NANinfo'
 
@@ -382,10 +415,12 @@ def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
             rep_pos = sym_num
             sym_seq_start = sym_seq            
 
-        else:
+        if not (len(set(sym_seq)) > 1) and not ((len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0) or sym_num == len(ref_seq)-1):
+            ref_flag = True
             sym_seq_start = sym_seq
             start_pos = ref_pos + pos_vcf - 1
             rep_pos = sym_num
+
         
 def dif_process(seq_lst,position,info='NANinfo'):
     variance_bin_dict = dict()
@@ -431,14 +466,19 @@ def dif_process(seq_lst,position,info='NANinfo'):
                 alt_variance_dict_n[alt_key[1:]] = alt_val
             position += 1
             info = 'snp'
-            return name_str_dict,alt_variance_dict_n,position,info
+            return name_str_dict,list(alt_variance_dict_n),position,info
     
     #!attention with dict maybe bag
-    dash_logic = False
+    dash_logic = True
 
     if dash_logic:
+
         alt_variance_dict_r = {j:i.replace('-','') for i,j in alt_variance_dict.items()}#rearrangement dict  
         alt_variance_dict_n = {i.replace('-',''):j for i,j in alt_variance_dict.items()}
+        #print('1',alt_variance_dict)
+        #print('r',alt_variance_dict_r)
+        #print('n',alt_variance_dict_n)
+
         #for alt_key,alt_val in alt_variance_dict_r.items():
             
             #alt_variance_dict_n[alt_key] = alt_val.replace('-','')
@@ -446,13 +486,13 @@ def dif_process(seq_lst,position,info='NANinfo'):
 
         if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):           
 
-            info = 'WARNING maybe wrong alignment'
+            info = 'maybe_inversion'
             print('WARNING maybe wrong alignment')
 
-            return name_str_dict,alt_variance_dict_n,position,info
-        return name_str_dict,alt_variance_dict_n,position,info
+            return name_str_dict,list(alt_variance_dict_n),position,info
+        return name_str_dict,list(alt_variance_dict_n),position,info
 
-    return name_str_dict,alt_variance_dict,position,info#!maybe not
+    return name_str_dict,list(alt_variance_dict),position,info#!maybe not
 
 file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
 
@@ -490,11 +530,12 @@ file_genome_opened.close()
 
 for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
     pos_set = parser_title(title_seq)
-    if pos_set[1][0]!= REF:
+    if pos_set[1][0]!= REF or int(pos_set[0][0][0]) == 0:
+        print('WARNING pass aln',pos_set[1][0],pos_set[0][0][0])
         #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
         #print(title_seq)
-        continue
-        
+        continue        
+
     else:
         start = int(pos_set[0][0][0])
         end = int(pos_set[0][0][1])
@@ -504,16 +545,19 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
                   len(seq_seq[0].replace('-','')),'\n',
                   file=log_pos)
         for dif_set in diffinder(seq_seq):
-            
-            name_str_dict,alt_variance_dict,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
+            #variance
+            name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
             
             contig,position_real = contig_definder(position,find_locus,find_source)
             with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
-                print(info,alt_variance_dict,position,position_real,file=alt_variance_dict_file)
+                print(info,variance,position,position_real,file=alt_variance_dict_file)
             bin_var = '\t'.join(name_str_dict.values())
 
-            columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
                 '40','PASS',info,'GT',bin_var]
+
+            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+            #    '40','PASS',info,'GT',bin_var]
 
             #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
             #    '40','PASS',info,'GT',bin_var]
