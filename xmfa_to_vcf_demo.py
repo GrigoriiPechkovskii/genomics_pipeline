@@ -20,9 +20,9 @@ import pandas as pd
 
 files = os.listdir()
 directory = os.getcwd()
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
+directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
 #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
@@ -30,9 +30,9 @@ directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_2.xmfa'
 
 
-name_vcf = 'test_mini_mauve.vcf'
-name_vcf_simple = 'test_mauve_sim.vcf'
-index_type = 'mauve'
+name_vcf = 'test_mini_parsnp.vcf'
+name_vcf_simple = 'test_parsnp_sim.vcf'
+index_type = 'parsnp'
 #file_xmfa = open(directory_file_xmfa)
 
 if index_type == 'parsnp':    
@@ -43,10 +43,10 @@ elif index_type == 'mauve':
     pos_minus = 2
 
  
-REF = 'AmesAncestor_GCF_000008445.1'#test_mini
+#REF = 'AmesAncestor_GCF_000008445.1'#test_mini
 #REF ='AmesAncestor_GCF_0000084451'
 #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
-#REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
+REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
 
 def get_index(directory_file_xmfa,index_type):
     '''Iter on xmfa header(mauve format) with #
@@ -393,8 +393,16 @@ def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
             if first_flag:# and seq_seq[1][0:10]:
                 first_flag = False
                 start_pos = ref_pos + pos_vcf - 2
-                if sym_num==1:
-                    if any([seq_seq[i][0:sym_num] == '-'*sym_num for i in range(len(seq_seq))]):#S.startswith(str)
+                #start_pos = ref_pos
+                #if sym_num==1:
+                #print('len=',len(sym_seq_lst),'sym_num=',sym_num,'start_pos',start_pos,'ref_pos',ref_pos)
+                #print(sym_seq_lst)
+                if sym_num != len(ref_seq)-1:
+                    #start_pos = ref_pos    
+                    #print([seq_seq[i][0:sym_num] == '-'*sym_num for i in range(len(seq_seq))])
+                    if len(sym_seq_lst) == sym_num:
+
+                    #if any([seq_seq[i][0:sym_num] == '-'*sym_num for i in range(len(seq_seq))]):#S.startswith(str)
                         start_pos = ref_pos
                         sym_seq_lst = sym_seq_lst + [list(list(zip(*seq_seq))[sym_num])]
                         #start_pos = ref_pos
@@ -489,7 +497,7 @@ def dif_process(seq_lst,position,info='NANinfo'):
             info = 'maybe_inversion'
             print('WARNING maybe wrong alignment')
 
-            return name_str_dict,list(alt_variance_dict_n),position,info
+            return name_str_dict,list(alt_variance_dict_r.values()),position,info
         return name_str_dict,list(alt_variance_dict_n),position,info
 
     return name_str_dict,list(alt_variance_dict),position,info#!maybe not
@@ -553,7 +561,7 @@ for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
                 print(info,variance,position,position_real,file=alt_variance_dict_file)
             bin_var = '\t'.join(name_str_dict.values())
 
-            columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
+            columns_vcf =[contig,str(position),'.',variance[0],','.join(variance[1:]),
                 '40','PASS',info,'GT',bin_var]
 
             #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
