@@ -1,0 +1,144 @@
+#FormatVersion Parsnp v1.1
+#SequenceCount 3
+##SequenceIndex 1
+##SequenceFile AmesAncestor_GCF_0000084451.fna.ref
+##SequenceHeader >Ames_Ancestor_A2084_GCF_000008445.1 GCF_000008445.1_ASM844v1_genomic NC_007530.2 Bacillus anthracis str. 'Ames Ancestor', complete genome
+##SequenceLength 5503926bp
+##SequenceIndex 2
+##SequenceFile Vollum_GCF_0007428951.fna
+##SequenceHeader >Vollum_GCF_000742895.1 GCF_000742895.1_ASM74289v1_genomic NZ_CP007666.1 Bacillus anthracis str. Vollum, complete genome
+##SequenceLength 5508209bp
+##SequenceIndex 3
+##SequenceFile SVA11_GCF_0005831051.fna
+##SequenceHeader >SVA11_GCF_000583105.1 GCF_000583105.1_ASM58310v1_genomic NZ_CP006742.1 Bacillus anthracis str. SVA11, complete genome
+##SequenceLength 5489537bp
+#IntervalCount 270
+#FormatVersion Mauve1
+#Sequence1File	/home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+#Sequence1Format	GenBank
+#Annotation1File	/home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+#Annotation1Format	GenBank
+#Sequence2File	/home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+#Sequence2Format	GenBank
+#Annotation2File	/home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+#Annotation2Format	GenBank
+#Sequence3File	/home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+#Sequence3Format	GenBank
+#Annotation3File	/home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+#Annotation3Format	GenBank
+#Sequence4File	/home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
+#Sequence4Format	GenBank
+#Annotation4File	/home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
+#Annotation4Format	GenBank
+#Sequence5File	/home/strain4/Desktop/dataset_for_test/GCF_10.1.gbk
+#Sequence5Format	GenBank
+#Annotation5File	/home/strain4/Desktop/dataset_for_test/GCF_10.1.gbk
+#Annotation5Format	GenBank
+#Sequence6File	/home/strain4/Desktop/dataset_for_test/GCF_11.1.gbk
+#Sequence6Format	GenBank
+#Annotation6File	/home/strain4/Desktop/dataset_for_test/GCF_11.1.gbk
+#Annotation6Format	GenBank
+#Sequence7File	/home/strain4/Desktop/dataset_for_test/GCF_12.1.gbk
+#Sequence7Format	GenBank
+#Annotation7File	/home/strain4/Desktop/dataset_for_test/GCF_12.1.gbk
+#Annotation7Format	GenBank
+#BackboneFile	/home/strain4/Desktop/dataset_for_test/mauve_out1/mauve_out1.bbcols
+> 1:1-240 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+--aattacaagatgcgattacaaggcagctcgtttctgatgtaccattatgcacttttttatcaggcggtgtagattcaa
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+ataatgacaaatactttaaagcaaatgcgtttcagccaaattcagatgcaccatttattcatttgatgactgagacgttt
+> 2:1114132-5210686 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+-ttattacaagatgcgattacaaggcagctcgtttctgatgtaccattatgcacttttttatcaggcggtgtagattcaa
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+ataatgacaaatactttaaagcaaatgcgtttcagccaaattcagatgcaccatttattcatttgatgactgagacgtPt
+> 3:1-4101609 + /home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+3ttattacaagatgcgattacaaggcagctcgtttctgatgtaccattatgcacttttttatcaggcggtgtagattcaa
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+ataatgacaaatactttaaagcaaatgcgtttcagccaaattcagatgcaccatttattcatttgatgactgagacgttt
+=
+> 2:1-1114131 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+4Mtattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaagtttattc
+acaaggtattgattttgtggataactttcttaatttcattgctatagctacttttttttgatattatagttgtgttttca
+ctttgaataagttttccacatctttatcttatccacaatttgtgtataacatgtggacagttttaatcacatgtgggtaa
+> 3:4101611-5229469 + /home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+4Ktattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaattttattc
+acaaggtattgattttgtggataactttcttaatttcattgctatagctacttttttttgatattatagttgtgttttca
+ctttgaataagttttccacatctttatcttatccacaatttgtgtataacatgtggacagttttaatcacatgtgggtaa
+=
+> 1:15-352 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaTtttattcca
+7tcttttatttcatttaaatcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+-atcccttccttcttgccctctttcatttcttcaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatGAACGCTGTTCatcaatataagtttccgtgtttcgtttt
+---ccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcagtc
+> 2:5392760-5402031 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaGtttattcca
+8tcttttatttcatttgagtcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+tatcccttccttcttgccctctttcatttcttcaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatAAGCGCTGCTTatcaatataagtttccgtgtttcgtttt
+cttccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcaLtc
+> 4:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaTtttattcca
+9tcttttatttcatttaaatcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+tatcccttccttcttgccctctttcatttcttcaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatGAACGCTGTTCatcaatataagtttccgtgtttcgtttt
+cttccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcagtc
+> 5:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_10.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaTtttattcca
+0tcttttatttcatttaaatcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+---cccttccttcttgccctctttcatttcttcaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatGAACGCTGTTCatcaatataagtttccgtgtttcgtttt
+cttccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcagtc
+> 6:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_11.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaTtttattcca
+9tcttttatttcatttaaatcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+tatcccttccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatGAACGCTGTTCatcaatataagtttccgtgtttcgtttt
+cttccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcagtc
+> 7:5409097-5418433 + /home/strain4/Desktop/dataset_for_test/GCF_12.1.gbk
+tattttttcttgttttttatatccacaaactcttttcgtacttttacacagtatatcgtgttgtggacaaTtttattcca
+7tcttttatttcatttaaatcagtggaggtaatgacatttttatctttcgagaaaacacccgacaaaatttcttctgctt
+tatcccttccttcttgccctctttcatttcttcaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+tggggtgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggagaattgatGAACGCTGTTCatcaatataagtttccgtgtttcgtttt
+cttccgtttttgtcattttctttttgctttctagcgcatattttctccccatataactaacatacttttcgaaatcagtc
+=
+> 1:0-0 + /home/strain4/Desktop/content/GI_AAJ/GI_AAJ_1/GCF_000008445.1_ASM844v1_genomic.gbk
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+> 2:729997-730974 + /home/strain4/Desktop/content/GI_AAJ/GI_AAJ_1/GCF_000583105.1_ASM58310v1_genomic.gbk
+acacaccgcccgtcacaccacgagagtttgtaacacccgaagtcggtggggtaacctttttggagccagccgcctaaggt
+gggacagatgattgggg-tgaagtcgtaacaaggtagccgtatcggaaggtgcggctggatcacctcctttctatggaga
+attgataagcgctgcttatcaatataagtttccgtgtttcgttttgttcagttttgagagaactatct-ctcatatataa
+atgtatgttctttgaaaactagataacagtgtagctcatattttttaatttttagtttggttaagttagaaagggcgcac
+--------------------------------------------------------------------------------
+> 3:730006-730780 + /home/strain4/Desktop/content/GI_AAJ/GI_AAJ_1/GCF_000725325.1_ASM72532v1_genomic.gbk
+acacaccgcccgtcacaccacgagagttggtaacacccgaagtcggtggggtaacctttttggagccagccgcctaaggt
+gggacagatgattgggggtgaagtcgtaacaaggtagccgtatcggaaggtgccgctggatcacctcctttctatggaga
+attgataagcgctgcttatcaatataagtttccgtgtttcgttttgttcagttttgagagaactatcttctcatatataa
+atgtatgttctttgaaaactagataacagtgtagctcatattttttaatttttagtttggttaagttagaaagggcgcac
+=
+> 1:100-260 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+1taagtaa-aaatgcgattacaaggc-----agctcgtttctgatgtaccattatgcacttttttatcaggcggtgtaga
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+> 2:1114132-5210686 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+2tacgtaa--aatgcgattac-----aaggcagctcgtttctgatgtaccattatgcacttttttatcaggcggtgtaga
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+> 3:1-4101609 + /home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+3taagtaaaaaatgtgattac-----agggcagctcgtttctgatgtaccattatgcacttttttatcaggcggtgtaga
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+> 4:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
+4taagtaaaaaatgcgattacaaggc-----agctcgtttctgatgtaccattatgcacttttttatcaggcggtgtaga
+cgctataacagcaattgctgcgaaagaatacgaaaaatcgggaaaaggtcaattacacacgtattcggttgattacgaag
+=
+> 1:200-260 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+tatcccttttccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+> 2:1114132-5210686 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+tatcccttttccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+> 3:1-4101609 + /home/strain4/Desktop/dataset_for_test/Vollum_GCF_000742895.1.gbk
+tatcccttt-ccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+> 4:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
+tatcccttttccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+=

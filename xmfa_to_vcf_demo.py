@@ -29,10 +29,13 @@ directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_m.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_2.xmfa'
 #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_3.xmfa'
+#directory_file_xmfa = '/home/strain4/Desktop/81_test/81_anc_mout'
+#directory_file_xmfa = '/home/strain4/Desktop/81_anc_test/out/test1.alignment'
 
-sort = True
-name_vcf = 'test_mini_mauve.vcf'
-name_vcf_simple = 'test_mauve_sim.vcf'
+
+sort = False
+name_vcf = 'test_81_test1.vcf'
+name_vcf_simple = 'test_sim.vcf'
 index_type = 'mauve'
 #file_xmfa = open(directory_file_xmfa)
 
@@ -44,7 +47,7 @@ elif index_type == 'mauve':
     pos_minus = 2
 
  
-#REF = 'AmesAncestor_GCF_000008445.1'#test_mini
+REF = 'AmesAncestor_GCF_000008445.1'#test_mini
 #REF ='AmesAncestor_GCF_0000084451'
 REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
 #REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
@@ -274,9 +277,9 @@ def tandem_check(list_nuc_strings:list):
             
 
 
-def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
+def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
     
-    ref_pos = int(pos_set[0][0][0])
+    #ref_pos = int(pos_set[0][0][0])
 
     info_flag = False
     pos_shift = -1
@@ -286,7 +289,7 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
     any(list((s==['-']*len(s) for s in sym_seq_lst[1:])))
     
     list((alt_set_tmp.update(set(s)) for s in sym_seq_lst[1:]))
-    ref_seq = seq_seq[0]
+    #ref_seq = seq_seq[0]
     #print(start_pos,sym_seq_lst)
     #print(start_pos,[s  for s in sym_seq_lst[1:]])
     if any([s == tuple('-')*len(sym_seq_lst[1:]) for s in zip(*sym_seq_lst[1:])]):
@@ -342,7 +345,7 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info):
 
     return start_pos,sym_seq_lst,info
 
-def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
+def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
     #req add position parametr if need break loop through equal symbol
     #start_pos - ref position last equal symbol + pos vcf
     #rep_pos - sym_num position first non equal symbol
@@ -351,8 +354,9 @@ def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
     #sym_seq_end = ''
     sym_num_start = 0
     sym_seq_lst = list()
-    ref_pos = int(pos_set[0][0][0])
-    ref_seq = seq_seq[0]#!reference sequence for compare  
+
+    #ref_pos = int(pos_set[0][0][0])
+    #ref_seq = seq_seq[0]#!reference sequence for compare  
     #pos_vcf = 0
     start_pos = ref_pos
     first_flag = True
@@ -405,7 +409,7 @@ def diffinder(seq_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
             #elif not first_flag and 
             else:               
                 sym_seq_lst = [list(sym_seq_start)] + sym_seq_lst
-            start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos,start_pos,sym_seq_lst,info)
+            start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos,start_pos,sym_seq_lst,info,ref_pos,ref_seq)
             yield start_pos,sym_seq_lst,info
 
             info = 'NANinfo'
@@ -530,50 +534,71 @@ for line in file_genome_opened:
 file_genome_opened.close()
 
 
-for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
-    pos_set = parser_title(title_seq)
-    if pos_set[1][0]!= REF or int(pos_set[0][0][0]) == 0:
-        print('WARNING pass aln',pos_set[1][0],pos_set[0][0][0])
-        #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
-        #print(title_seq)
-        continue        
 
-    else:
-        start = int(pos_set[0][0][0])
-        end = int(pos_set[0][0][1])
-        with open('log_pos_m.txt','a') as log_pos:
-            print(file_genome_read[start-1:end] == seq_seq[0].replace('-',''),'\n',
-                  len(file_genome_read[start:end+1]),'\n',
-                  len(seq_seq[0].replace('-','')),'\n',
-                  file=log_pos)
-        for dif_set in diffinder(seq_seq):
-            #variance
-            name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
+col_interval = []
+for val in id_nameseq_dict_val:
+    col_interval += [val + '_start']
+    col_interval += [val + '_end']
+interval_df = pd.DataFrame(columns=col_interval)
+
+def variance_calling():
+    global pos_set#!
+    global seq_seq
+    global interval_df
+    for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
+        pos_set = parser_title(title_seq)
+
+        interval_dict = dict()
+        for interval,name in zip(pos_set[0],pos_set[1]):
+            for val,tag in zip(interval,['_start','_end']):
+                interval_dict[name+tag] = int(val)
+        interval_df = interval_df.append(interval_dict,ignore_index=True)
+
+        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:#!0 -> 1
+            print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
+            #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
+            #print(title_seq)
+            continue        
+
+        else:
+            start = int(pos_set[0][0][0])
+            end = int(pos_set[0][0][1])
+            with open('log_pos_m.txt','a') as log_pos:
+                print(file_genome_read[start-1:end] == seq_seq[0].replace('-',''),'\n',
+                      len(file_genome_read[start:end+1]),'\n',
+                      len(seq_seq[0].replace('-','')),'\n',
+                      file=log_pos)
+            for dif_set in diffinder(seq_seq,int(pos_set[0][0][0]),seq_seq[0]):
+                #variance
+                name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
 
 
-            
-            contig,position_real = contig_definder(position,find_locus,find_source)
+                
+                contig,position_real = contig_definder(position,find_locus,find_source)
 
-            with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
-                print(info,variance,position,position_real,file=alt_variance_dict_file)
-            bin_var = '\t'.join(name_str_dict.values())
+                with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
+                    print(info,variance,position,position_real,file=alt_variance_dict_file)
+                bin_var = '\t'.join(name_str_dict.values())
 
-            columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
-                '40','PASS',info,'GT',bin_var]
+                columns_vcf =[contig,str(position),'.',variance[0],','.join(variance[1:]),
+                    '40','PASS',info,'GT',bin_var]
 
-            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-            #    '40','PASS',info,'GT',bin_var]
+                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+                #    '40','PASS',info,'GT',bin_var]
 
-            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-            #    '40','PASS',info,'GT',bin_var]
+                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
+                #    '40','PASS',info,'GT',bin_var]
 
-            #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
-            #    '40','PASS',info,'GT',bin_var]#2
-            columns_vcf = '\t'.join(columns_vcf)
-            columns_vcf+='\n'
-            with open(name_vcf,'a') as file_vcf:
-                    file_vcf.write(columns_vcf)
+                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
+                #    '40','PASS',info,'GT',bin_var]#2
+                columns_vcf = '\t'.join(columns_vcf)
+                columns_vcf+='\n'
+                with open(name_vcf,'a') as file_vcf:
+                        file_vcf.write(columns_vcf)
 
+    interval_df.to_csv('interval.csv',sep='\t')
+
+variance_calling()
 #sorting
 if sort:
     df_vcf = pd.read_csv(name_vcf,sep='\t')
@@ -583,4 +608,48 @@ if sort:
     df_vcf[df_vcf['INFO']!='WARNING maybe wrong alignment'].to_csv(name_vcf_simple,sep='\t',index=False)
 
 print('end')
+#directory_file_xmfa = 
+def aln_getter(query_pos,start_inter=100,end_inter=100): 
+    contig,position_real = contig_definder(query_pos,find_locus,find_source)
 
+    for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
+        #print(title_seq)
+
+        pos_set = parser_title(title_seq)
+
+        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:
+            print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
+            continue
+        elif pos_set[1][0]== REF:
+            #print(int(pos_set[0][0][0]), query_pos,int(pos_set[0][0][1]))
+            if int(pos_set[0][0][0]) <= position_real <= int(pos_set[0][0][1]):
+                pos = position_real - int(pos_set[0][0][0])
+                pos_gapless = 0
+                pos_full = 0
+                for i in seq_seq[0]:#range(len(seq_seq[0])):
+                    if i != '-':
+                        pos_gapless += 1
+                    if pos_gapless == pos or pos==0:#0
+                        break
+                    pos_full += 1 
+                start_inter = pos_full - start_inter
+                end_inter = pos_full + end_inter
+                #print('pos_full=',pos_full,'pos_gapless=',pos_gapless)
+                if start_inter<0:
+                    start_inter = 0
+                if end_inter > len(seq_seq[0])-1:
+                    end_inter = len(seq_seq[0])-1
+                fast_opened = open(contig + '_' +str(position_real) + '_variance' + '.fna','a')
+
+                for n_seq in range(len(seq_seq)):
+                    #head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),pos_set[1][n_seq],title_seq[n_seq],'\n'])
+                    head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),'\n'])
+
+                    fast_opened.write(head)
+                    fast_opened.write(seq_seq[n_seq][start_inter:end_inter] + '\n')
+                    #print('position_real=',position_real,'query_pos=',query_pos,
+                    #    'start_inter=',start_inter,'end_inter=',end_inter,'len(seq_seq[0])-1',len(seq_seq[0])-1,
+                    #    pos_set[1][n_seq])
+                fast_opened.close()
+
+#aln_getter(164380,start_inter=300,end_inter=300)
