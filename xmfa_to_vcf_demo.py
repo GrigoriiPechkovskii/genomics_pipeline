@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 #By Grigorii Pechkovskii
 '''
 Check ext with blank alt - fixed, its maybe inversion, out with warning string
@@ -14,30 +16,57 @@ print('start')
 
 import re
 import os
+import sys
+import argparse
 
 import numpy as np
 import pandas as pd
 
-files = os.listdir()
-directory = os.getcwd()
-directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp_edit.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
-directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
-#directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_m.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_2.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_cut_3.xmfa'
-#directory_file_xmfa = '/home/strain4/Desktop/81_test/81_anc_mout'
-#directory_file_xmfa = '/home/strain4/Desktop/81_anc_test/out/test1.alignment'
+parser = argparse.ArgumentParser()
+parser.add_argument('-x', '--xmfa',action='store', help='File xmfa')
+parser.add_argument('-r', '--ref',action='store', help='Reference')
+parser.add_argument('-d', '--dir',action='store', help='Work directory')
+parser.add_argument('-o', '--out-dir',action='store',default=os.getcwd(), help='Out directory')
+parser.add_argument('-i', '--index-type',action='store',default='mauve', help="Index type 'mauve' or 'parsnp'")
+parser.add_argument('-g', '--gbk-file',action='store',default='mauve', help='File gbk')
+parser.add_argument('-n', '--name-vcf',action='store',default='test_mini.vcf', help='File gbk')
+
+REF = parser.parse_args().ref
+directory_file_xmfa = parser.parse_args().xmfa
+directory  = parser.parse_args().dir
+directory_out  = parser.parse_args().out_dir
+file_gbk = parser.parse_args().gbk_file
+index_type = parser.parse_args().index_type
+name_vcf = parser.parse_args().name_vcf
+
+if not os.access(directory_out,os.F_OK):
+    os.mkdir(directory_out)
+
+if False:
+    directory = os.getcwd()
+    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
+    #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
+    #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
+    #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
+    #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
+    directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
 
 
-sort = False
-name_vcf = 'test_81_test1.vcf'
-name_vcf_simple = 'test_sim.vcf'
-index_type = 'mauve'
-#file_xmfa = open(directory_file_xmfa)
+    REF = 'AmesAncestor_GCF_000008445.1'#test_mini
+    #REF ='AmesAncestor_GCF_0000084451'
+    REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    #REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
+    directory_out = os.getcwd()
+
+
+    index_type = 'mauve'
+    #name_vcf_simple = 'test_sim.vcf'
+
+    file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
+    name_vcf = 'test_mini.vcf'
+
+sort = True
+
 
 if index_type == 'parsnp':    
     pos_vcf = 1
@@ -45,12 +74,7 @@ if index_type == 'parsnp':
 elif index_type == 'mauve':
     pos_vcf = 0
     pos_minus = 2
-
  
-REF = 'AmesAncestor_GCF_000008445.1'#test_mini
-#REF ='AmesAncestor_GCF_0000084451'
-REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
-#REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
 
 def get_index(directory_file_xmfa,index_type):
     '''Iter on xmfa header(mauve format) with #
@@ -101,12 +125,24 @@ def head_vcf(name_seq:list):
     '''
     columns_name =['#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT']
     columns_name += name_seq
+    tag = '##fileformat=VCFv4.2' + '\n' 
+    tag += '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">' + '\n'
+    tag += '##FILTER=<ID=PASS,Description="All filters passed">' + '\n'
+    tag += '##INFO=<ID=SNP,Number=0,Type=Flag,Description="Indicates that the variant is an SNP.">' + '\n'
+    tag += '##INFO=<ID=SNR,Number=0,Type=Flag,Description="Indicates that the variant is an SNR.">' + '\n'
+    tag += '##INFO=<ID=REPEAT,Number=0,Type=Flag,Description="Indicates that the variant is an REPEAT.">' + '\n' 
+    tag += '##INFO=<ID=ComplexIndel,Number=0,Type=Flag,Description="Indicates that the variant is an ComplexIndel.">' + '\n' 
+    tag += '##INFO=<ID=NANinfo,Number=0,Type=Flag,Description="Indicates that the variant is an NANinfo.">' + '\n' 
+    tag += '##INFO=<ID=substitution,Number=0,Type=Flag,Description="Indicates that the variant is an substitution.">' + '\n' 
+    tag += '##INFO=<ID=maybe_inversion,Number=0,Type=Flag,Description="Indicates that the variant is an maybe_inversion.">' + '\n'   
     head = '\t'.join(columns_name) + '\n'
-    with open(name_vcf,'w') as file_vcf:
+    with open(directory_out +'/'+ name_vcf,'w') as file_vcf:
+        file_vcf.write(tag)
         file_vcf.write(head)
-    print(head)
+    return tag
+    #print(head)
 
-head_vcf(id_nameseq_dict_val)
+tag = head_vcf(id_nameseq_dict_val)
 
 def single_aln_generator(directory_file_xmfa):
     '''Generator for xmfa,
@@ -304,9 +340,9 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
                 uniq_lst_right.append([uniq_let]*len(seq_seq))
                 #info  = 'SNR'
                 if len(uniq_let) == 1:
-                    info = 'snr'
+                    info = 'SNR'
                 else:
-                     info = 'repeat'
+                     info = 'REPEAT'
             else:
                 if len(set([seq[right_ind_start] for seq in seq_seq]))>1:
                     print('r Warning Exception snr ended with snp',start_pos)
@@ -320,9 +356,9 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
                 uniq_lst_left.append([uniq_let]*len(seq_seq))
                 #info  = 'SNR'
                 if len(uniq_let) == 1:
-                    info = 'snr'
+                    info = 'SNR'
                 else:
-                     info = 'repeat'
+                     info = 'REPEAT'
                 pos_shift += len(uniq_let)
             else:
                 pos_shift += 1
@@ -468,7 +504,7 @@ def dif_process(seq_lst,position,info='NANinfo'):
             alt_variance_dict_n[alt_key[1:]] = alt_val
         position += 1
         if len(seq_lst)==2:
-            info = 'snp'
+            info = 'SNP'
         else:
             info = 'substitution'
 
@@ -493,14 +529,13 @@ def dif_process(seq_lst,position,info='NANinfo'):
         if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):           
 
             info = 'maybe_inversion'
-            print('WARNING maybe wrong alignment')
+            #print('WARNING maybe wrong alignment')
 
             return name_str_dict,list(alt_variance_dict_r.values()),position,info
         return name_str_dict,list(alt_variance_dict_n),position,info
 
     return name_str_dict,list(alt_variance_dict),position,info#!maybe not
 
-file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
 
 def contig_finder_gbk(file_gbk_dir):
     ''' '''
@@ -525,13 +560,13 @@ def contig_definder(position,find_locus,find_source):
             position_real = position - source[0]+ 1#!
             return locus,position_real
 
-file_genome = 'AmesAncestor_GCF_0000084451.fna'
+'''file_genome = 'AmesAncestor_GCF_0000084451.fna'
 file_genome_opened = open(file_genome)
 file_genome_read = ''
 for line in file_genome_opened:
     if '>' not in line:
         file_genome_read += line.strip()
-file_genome_opened.close()
+file_genome_opened.close()'''
 
 
 
@@ -545,15 +580,21 @@ def variance_calling():
     global pos_set#!
     global seq_seq
     global interval_df
+    bed_columns = ['#contig','start_positioin','end_position','name']
+    bed_df = pd.DataFrame(columns=bed_columns)
+
     for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
         pos_set = parser_title(title_seq)
 
+        #for interval
         interval_dict = dict()
         for interval,name in zip(pos_set[0],pos_set[1]):
             for val,tag in zip(interval,['_start','_end']):
                 interval_dict[name+tag] = int(val)
         interval_df = interval_df.append(interval_dict,ignore_index=True)
 
+
+        
         if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:#!0 -> 1
             print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
             #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
@@ -561,51 +602,76 @@ def variance_calling():
             continue        
 
         else:
+
+            #for bed format
+            #bed = open(directory_out + '/' +'test'+'.bed','a')
+            #bed_df = pd.DataFrame(columns=['#contig','start_positioin','end_position','name'])            
+            #bed.write('\t'.join(['#contig','start_positioin','end_position','name'])+'\n')
+            bed_dic = {}
+            contig,position_real_f = contig_definder(int(pos_set[0][0][0]),find_locus,find_source)
+            contig,position_real_s = contig_definder(int(pos_set[0][0][1]),find_locus,find_source)
+            for name in pos_set[1]:
+                bed_str = [contig] + [str(position_real_f)] + [str(position_real_s)] + [name]
+
+                bed_dic['#contig'] = contig
+                bed_dic['start_positioin'] = str(position_real_f)
+                bed_dic['end_position'] = str(position_real_s)
+                bed_dic['name'] = name
+                bed_df = bed_df.append(bed_dic,ignore_index=True)
+                #bed.write('\t'.join(bed_str)+'\n')
+            #bed.close()           
+
+
             start = int(pos_set[0][0][0])
             end = int(pos_set[0][0][1])
-            with open('log_pos_m.txt','a') as log_pos:
-                print(file_genome_read[start-1:end] == seq_seq[0].replace('-',''),'\n',
-                      len(file_genome_read[start:end+1]),'\n',
-                      len(seq_seq[0].replace('-','')),'\n',
-                      file=log_pos)
+            #with open('log_pos_m.txt','a') as log_pos:
+            #    print(file_genome_read[start-1:end] == seq_seq[0].replace('-',''),'\n',
+            #          len(file_genome_read[start:end+1]),'\n',
+            #          len(seq_seq[0].replace('-','')),'\n',
+            #          file=log_pos)
             for dif_set in diffinder(seq_seq,int(pos_set[0][0][0]),seq_seq[0]):
                 #variance
                 name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
-
-
                 
                 contig,position_real = contig_definder(position,find_locus,find_source)
-
-                with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
-                    print(info,variance,position,position_real,file=alt_variance_dict_file)
+                #contig = pos_set[1][0]
+                
+                #with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
+                #    print(info,variance,position,position_real,file=alt_variance_dict_file)
                 bin_var = '\t'.join(name_str_dict.values())
-
-                columns_vcf =[contig,str(position),'.',variance[0],','.join(variance[1:]),
-                    '40','PASS',info,'GT',bin_var]
-
-                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-                #    '40','PASS',info,'GT',bin_var]
-
-                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict)[0],','.join(list(alt_variance_dict)[1:]),
-                #    '40','PASS',info,'GT',bin_var]
-
-                #columns_vcf =[contig,str(position_real),'.',list(alt_variance_dict.values())[0],','.join(list(alt_variance_dict.values())[1:]),
-                #    '40','PASS',info,'GT',bin_var]#2
+                #!position_real
+                columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
+                    '40','PASS',info,'GT',bin_var]                  
+                
                 columns_vcf = '\t'.join(columns_vcf)
                 columns_vcf+='\n'
-                with open(name_vcf,'a') as file_vcf:
+                with open(directory_out +'/'+ name_vcf,'a') as file_vcf:
                         file_vcf.write(columns_vcf)
 
-    interval_df.to_csv('interval.csv',sep='\t')
+    interval_df.to_csv(directory_out +'/'+name_vcf[:-4]+'_'+'interval.csv',sep='\t')
+
+    #bed_df.index = bed_df['#contig']
+    #del bed_df['#contig']
+    bed_df.sort_values(by=['#contig','start_positioin'],ascending=[False,True])
+    bed_df.to_csv(directory_out + '/' +name_vcf[:-4]+'.bed',sep='\t',index=False)
+
 
 variance_calling()
 #sorting
 if sort:
-    df_vcf = pd.read_csv(name_vcf,sep='\t')
+    with open(directory_out +'/'+name_vcf) as vcf:
+        n_comment = 0
+        for line in vcf:
+            if '##' in line:
+               n_comment += 1
+    df_vcf = pd.read_csv(directory_out +'/'+name_vcf,sep='\t',header=n_comment)
     df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
-    df_vcf.to_csv(name_vcf,sep='\t',index=False)
+    os.remove(directory_out +'/'+name_vcf)    
+    with open(directory_out +'/'+name_vcf,'a') as vcf:
+        vcf.write(tag)
+    df_vcf.to_csv(directory_out +'/'+name_vcf,sep='\t',index=False,mode='a')
 
-    df_vcf[df_vcf['INFO']!='WARNING maybe wrong alignment'].to_csv(name_vcf_simple,sep='\t',index=False)
+    #df_vcf[df_vcf['INFO']!='WARNING maybe wrong alignment'].to_csv(name_vcf_simple,sep='\t',index=False)
 
 print('end')
 #directory_file_xmfa = 
