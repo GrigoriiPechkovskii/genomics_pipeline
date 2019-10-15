@@ -349,7 +349,8 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
             return start_pos,sym_seq_lst,info
         
         uniq_lst_right=[]
-        for right_ind_start,right_ind_end in zip(range(sym_num+len(uniq_let),len(ref_seq)-1,len(uniq_let)),range(sym_num+len(uniq_let)*2,len(ref_seq)-1,len(uniq_let))):
+        #print(sym_num,start_pos)
+        for right_ind_start,right_ind_end in zip(range(sym_num+1+len(uniq_let),len(ref_seq),len(uniq_let)),range(sym_num+len(uniq_let)*2,len(ref_seq)-1,len(uniq_let))):
             if all([(seq[right_ind_start:right_ind_end]==uniq_let or seq[right_ind_start:right_ind_end]=='-'*len(uniq_let) )for seq in seq_seq]):#!!!ex if break in snp
                 uniq_lst_right.append([uniq_let]*len(seq_seq))
                 #info  = 'SNR'
@@ -389,10 +390,11 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
         #left_end = [ref_seq[left_ind_start-2]]*len(seq_seq)
         #left_end_pos = left_ind_start-2
         
-        #print('start_pos1',start_pos)
         sym_seq_lst = [left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right
         start_pos = start_pos - pos_shift
 
+        log.close()
+    #print(start_pos,sym_seq_lst)
     return start_pos,sym_seq_lst,info
 
 def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):

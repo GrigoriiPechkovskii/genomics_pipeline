@@ -142,3 +142,8 @@ tatcccttt-ccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttc
 > 4:5229470-5238806 - /home/strain4/Desktop/dataset_for_test/GCF_9.1.gbk
 tatcccttttccttcttgccctctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
 =
+> 1:1000-260 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+tatccttttttttttcccttgtctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+> 2:1114132-5210686 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+tatcc--ttttttttcccttgtctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
+=
