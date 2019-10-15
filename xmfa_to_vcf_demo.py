@@ -42,14 +42,15 @@ name_vcf = parser.parse_args().name_vcf
 if not os.access(directory_out,os.F_OK):
     os.mkdir(directory_out)
 
-if False:
+if True:
     directory = os.getcwd()
     directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
-    directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
+    #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
+    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_0'
 
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
@@ -63,7 +64,7 @@ if False:
     #name_vcf_simple = 'test_sim.vcf'
 
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    name_vcf = 'test_mini.vcf'
+    name_vcf = 'test_rev.vcf'
 
 sort = True
 
@@ -187,6 +188,8 @@ def parser_title(title_seq:list):
     position_every_dict = dict()
     position_every_num_dict = dict()
     name_every = []
+    id_strand = dict()
+    name_strand = dict()
     for title in title_seq:
 
         id_search = re.search(r'(\d*):',title)
@@ -206,16 +209,27 @@ def parser_title(title_seq:list):
 
         position_every_num_dict[id_seq] = position
 
+        strand_search = re.search(r'\s([\+-])\s',title_seq[0]).group(1)
+        id_strand[id_seq] = strand_search
+
+
+    #print(id_strand)
     name_seq_title = dict()
+    #for sorting maybe!!
     for key,val in position_every_num_dict.items() :
         #print(id_nameseq_dict[key])
         name_seq_title[id_nameseq_dict[key]] = val#!id_nameseq_dict frome up namespace
-     
+        
+
+    for key,val in id_strand.items():
+        name_strand[id_nameseq_dict[key]] = val
+
     pos = list(name_seq_title.values())
     name_idseq = list(name_seq_title)
-
+    strand = list(name_strand.values())
+    #print(name_strand)
     #return name_every,position_every,position_every_dict,position_every_num_dict,pos,name_idseq
-    return pos,name_idseq
+    return pos,name_idseq,strand
 
 
 def join_dif(massive_str):
@@ -412,7 +426,7 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
         if (len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0) or sym_num == len(ref_seq)-1:#here break
             ref_flag = True
             if sym_num == len(ref_seq)-1 and (len(set(sym_seq)) == 1):#why
-                #print('WARNING break in diffinder')
+                print('WARNING break in diffinder')
                 break
 
 
@@ -471,6 +485,7 @@ def dif_process(seq_lst,position,info='NANinfo'):
 
     alt_variance_set  = set()
     alt_variance_dict = dict()
+    #print(variance_lst)
     if len(variance_lst)>0:
         reference_variance = variance_lst[0] #define reference
 
@@ -569,6 +584,27 @@ for line in file_genome_opened:
 file_genome_opened.close()'''
 
 
+def seq_reverse(seq_seq):
+
+    #seq_rev = ''
+    seq_seq_rev = []
+    for seq in seq_seq:
+        seq_rev = ''
+        for sym in seq:
+            if sym=='C':
+                seq_rev += 'G'
+            elif sym=='G':
+                seq_rev += 'C'
+            elif sym=='T':
+                seq_rev+='A'
+            elif sym=='A':
+                seq_rev += 'T'
+            elif sym=='-':
+                seq_rev += '-'
+        seq_rev = seq_rev[::-1]
+        seq_seq_rev += [seq_rev]
+    return seq_seq_rev
+
 
 col_interval = []
 for val in id_nameseq_dict_val:
@@ -580,6 +616,7 @@ def variance_calling():
     global pos_set#!
     global seq_seq
     global interval_df
+    global title_seq
     bed_columns = ['#contig','start_positioin','end_position','name']
     bed_df = pd.DataFrame(columns=bed_columns)
 
@@ -621,6 +658,15 @@ def variance_calling():
                 #bed.write('\t'.join(bed_str)+'\n')
             #bed.close()           
 
+            if pos_set[2][0] == '-':
+                #print('before===',seq_seq)
+                seq_seq = seq_reverse(seq_seq)
+                #pos_set = list(pos_set)
+                #pos_set[0] = [ i[::-1] for i in pos_set[0]]
+                #pos_set = tuple(pos_set)
+                #print('after===',seq_seq)
+                print('Warning reverse strand')                           
+
 
             start = int(pos_set[0][0][0])
             end = int(pos_set[0][0][1])
@@ -630,14 +676,19 @@ def variance_calling():
             #          len(seq_seq[0].replace('-','')),'\n',
             #          file=log_pos)
             for dif_set in diffinder(seq_seq,int(pos_set[0][0][0]),seq_seq[0]):
+                #print(dif_set)
                 #variance
                 name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
                 
+                #if pos_set[2][0] == '-':
+                    #print(position,int(pos_set[0][0][0])- (int(position)-int(pos_set[0][0][0])))
+                    #position = int(pos_set[0][0][0])- (int(position)-int(pos_set[0][0][0]))
+
                 contig,position_real = contig_definder(position,find_locus,find_source)
                 #contig = pos_set[1][0]
-                
-                #with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
-                #    print(info,variance,position,position_real,file=alt_variance_dict_file)
+
+                with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
+                    print(info,name_str_dict,variance,position,position_real,file=alt_variance_dict_file)
                 bin_var = '\t'.join(name_str_dict.values())
                 #!position_real
                 columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
@@ -677,7 +728,7 @@ print('end')
 #directory_file_xmfa = 
 def aln_getter(query_pos,start_inter=100,end_inter=100): 
     contig,position_real = contig_definder(query_pos,find_locus,find_source)
-
+    position_real = query_pos
     for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
         #print(title_seq)
 
@@ -708,8 +759,8 @@ def aln_getter(query_pos,start_inter=100,end_inter=100):
                 fast_opened = open(contig + '_' +str(position_real) + '_variance' + '.fna','a')
 
                 for n_seq in range(len(seq_seq)):
-                    #head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),pos_set[1][n_seq],title_seq[n_seq],'\n'])
-                    head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),'\n'])
+                    head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),pos_set[1][n_seq],title_seq[n_seq],'\n'])
+                    #head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),'\n'])
 
                     fast_opened.write(head)
                     fast_opened.write(seq_seq[n_seq][start_inter:end_inter] + '\n')
