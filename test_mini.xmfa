@@ -147,3 +147,13 @@ tatccttttttttttcccttgtctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttc
 > 2:1114132-5210686 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
 tatcc--ttttttttcccttgtctttcatttcttaaggagacaaatcttctatatgtttattgagcaatgacacctcttctt
 =
+> 1:2-64 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+AGTGCTATGTATTACA---------------TATTATTATTATTATTATTATTGCTTACGTGAG
+> 2:1-64 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+AGTGCTATGTATTACATATTATTATTATTATTATTATTATTATTATTATTATTGCTTACGTGAG
+=
+> 1:10000-64 + /home/strain4/Desktop/dataset_for_test/AmesAncestor_GCF_000008445.1.gbk
+AGTGCTATGTATTACATATTATTATTATTATTATTAT---------------GCTTACGTGAG
+> 2:1-64 + /home/strain4/Desktop/dataset_for_test/SVA11_GCF_000583105.1.gbk
+AGTGCTATGTATTACATATTATTATTATTATTATTATTATTATTATTATTATGCTTACGTGAG
+=

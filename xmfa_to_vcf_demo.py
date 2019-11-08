@@ -50,7 +50,7 @@ if True:
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
-    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_0'
+    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_1'
 
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
@@ -64,9 +64,10 @@ if True:
     #name_vcf_simple = 'test_sim.vcf'
 
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    name_vcf = 'test_rev.vcf'
+    name_vcf = 'test3.vcf'
 
 sort = True
+delete_ref = True
 
 
 if index_type == 'parsnp':    
@@ -75,7 +76,6 @@ if index_type == 'parsnp':
 elif index_type == 'mauve':
     pos_vcf = 0
     pos_minus = 2
- 
 
 def get_index(directory_file_xmfa,index_type):
     '''Iter on xmfa header(mauve format) with #
@@ -326,7 +326,6 @@ def tandem_check(list_nuc_strings:list):
         #return list_tandem[0]#!return complex uniq_let
             
 
-
 def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
     
     #ref_pos = int(pos_set[0][0][0])
@@ -350,7 +349,14 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
         
         uniq_lst_right=[]
         #print(sym_num,start_pos)
-        for right_ind_start,right_ind_end in zip(range(sym_num+1+len(uniq_let),len(ref_seq),len(uniq_let)),range(sym_num+len(uniq_let)*2,len(ref_seq)-1,len(uniq_let))):
+        #for right_ind_start,right_ind_end in zip(range(sym_num+1+len(uniq_let),len(ref_seq),len(uniq_let)),range(sym_num+len(uniq_let)*2,len(ref_seq)-1,len(uniq_let))):
+        log_bug = open('log_bug','a')
+        print('start_pos',start_pos,'sym_num=',sym_num,'uniq_let=',uniq_let,file=log_bug) 
+        for right_ind_start,right_ind_end in zip(range(sym_num+len(sym_seq_lst[1:]),len(ref_seq)-1,len(uniq_let)),range(sym_num+len(sym_seq_lst[1:])+len(uniq_let),len(ref_seq)-1,len(uniq_let))):
+            
+            print(right_ind_start,right_ind_end,seq_seq[0][right_ind_start:right_ind_end],
+                all([(seq[right_ind_start:right_ind_end]==uniq_let or seq[right_ind_start:right_ind_end]=='-'*len(uniq_let) )for seq in seq_seq]),file=log_bug)
+
             if all([(seq[right_ind_start:right_ind_end]==uniq_let or seq[right_ind_start:right_ind_end]=='-'*len(uniq_let) )for seq in seq_seq]):#!!!ex if break in snp
                 uniq_lst_right.append([uniq_let]*len(seq_seq))
                 #info  = 'SNR'
@@ -366,6 +372,7 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
         uniq_lst_left=[]
         #left_end = [ref_seq[sym_num-1]]*len(seq_seq)
         for left_ind_start,left_ind_end in zip(range(sym_num,0,-len(uniq_let)),range(sym_num-len(uniq_let),0,-len(uniq_let))):
+        #for left_ind_start,left_ind_end in zip(range(sym_num,0,-len(sym_seq_lst[1:])),range(sym_num-len(uniq_let),0,-len(uniq_let))):
             #[(print(seq[left_ind_end:left_ind_start],uniq_let,'-'*len(uniq_let),seq[left_ind_end:left_ind_start]==uniq_let,seq[left_ind_end:left_ind_start]=='-'*len(uniq_let),all([(seq[left_ind_end:left_ind_start]==uniq_let or seq[left_ind_end:left_ind_start]=='-'*len(uniq_let) )for seq in seq_seq]))) for seq in seq_seq]
             if all([(seq[left_ind_end:left_ind_start]==uniq_let or seq[left_ind_end:left_ind_start]=='-'*len(uniq_let) )for seq in seq_seq]):#!!!ex if break in snp
                 uniq_lst_left.append([uniq_let]*len(seq_seq))
@@ -389,12 +396,15 @@ def repeat_diffinder(sym_num,start_pos,sym_seq_lst,info,ref_pos,ref_seq):
             pos_shift = 0
         #left_end = [ref_seq[left_ind_start-2]]*len(seq_seq)
         #left_end_pos = left_ind_start-2
-        
+        print('[left_end=]',[left_end],'uniq_lst_left=',uniq_lst_left,'sym_seq_lst[1:]',sym_seq_lst[1:],
+            'uniq_lst_right=',uniq_lst_right,
+            '+++=',[left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right,file=log_bug)
         sym_seq_lst = [left_end] +  uniq_lst_left + sym_seq_lst[1:] + uniq_lst_right
         start_pos = start_pos - pos_shift
 
-        log.close()
+
     #print(start_pos,sym_seq_lst)
+    #log_bug.close()
     return start_pos,sym_seq_lst,info
 
 def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
@@ -719,6 +729,9 @@ if sort:
                n_comment += 1
     df_vcf = pd.read_csv(directory_out +'/'+name_vcf,sep='\t',header=n_comment)
     df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
+
+    if delete_ref:
+        del df_vcf[REF]
     os.remove(directory_out +'/'+name_vcf)    
     with open(directory_out +'/'+name_vcf,'a') as vcf:
         vcf.write(tag)
