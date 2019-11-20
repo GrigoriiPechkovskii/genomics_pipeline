@@ -2,12 +2,17 @@ import pandas as pd
 
 print('start')
 
+pd.set_option('display.max_columns', 20)
+
 file_fasta = '/home/strain4/Desktop/genomics_pipline/test_mini_vcf.fna'
 file_fasta = '/home/strain4/Desktop/genomics_pipline/test_merger.fna'
 file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger.vcf'
+file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker2.vcf'
+
+
 contig = 'A'
 header = 5
-
+header = 0
 #file_fasta = '/home/strain4/Desktop/test_split/GCF_000008445.1_ASM844v1_genomic.fna'
 #file_vcf = '/home/strain4/Desktop/test_split/merged.vcf'
 #contig = 'NC_007530'
@@ -64,6 +69,7 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
         position_outside = int(vcf_slice_end.iloc[0]['POS'])
 
         sample_dict = {i:'' for i in vcf_slice.iloc[:,9:]}
+        print(sample_dict)
         sample_bin_dict = {i:None for i in vcf_slice.iloc[:,9:]}
 
         position_first = int(vcf_slice.iloc[0]['POS'])
@@ -73,24 +79,36 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
         ref_mod = sequence[position_first-1:position_last]
 
         for position_row in vcf_slice.index[:-1]:
-            print('w =',position_row + len(vcf_slice.loc[position_row]['REF']),position_outside)
+            #print('w =',position_row + len(vcf_slice.loc[position_row]['REF']),position_outside)
             if position_row + len(vcf_slice.loc[position_row]['REF']) - position_outside > 0:
                 print('Warning overlay window maybe wrong result,','position =',position_row) 
                 #print(position_row + len(vcf_slice.loc[position_row]['REF']) - position_last)
 
         for sample in sample_dict:
-            if any(vcf_slice[sample].isin(['.'])):
+            #if any(vcf_slice[sample].isin(['.'])):
+            if  not all(vcf_slice[sample].isin(['.'])) and not all(~vcf_slice[sample].isin(['.'])):#!
                 #print('Warning indeterminate genotype of the sample')
-                assert not any(vcf_slice[sample].isin(['.'])), "'Warning indeterminate genotype of the sample'"                
+                print('1111', not all(vcf_slice[sample].isin(['.'])))
+                print('2222',not all(~vcf_slice[sample].isin(['.'])))
+                print(sample,vcf_slice[sample])
+                assert False, "'Warning indeterminate genotype of the sample'"                
 
         variant = []
+        sample_will_deleted = set()
         for position_row in vcf_slice.index:
             variant = [vcf_slice.loc[position_row]['REF']] + vcf_slice.loc[position_row]['ALT'].split(',')
             position_inter = int(vcf_slice.loc[position_row]['POS'])
             #vcf.loc[position_row,'REF'] = ref_mod #maybe need
+            print(position_start)
             for sample in sample_dict:
-                #print(variant)
-                sample_dict[sample] += sequence[position_start:position_inter-1] + variant[int(vcf_slice.loc[position_row][sample])]
+
+                if vcf_slice.loc[position_row][sample] == '.':
+                    sample_dict[sample]
+                    sample_will_deleted.add(sample)
+                    #print(sample_dict,vcf_slice.loc[position_row][sample])
+                else:
+                    #print(variant)
+                    sample_dict[sample] += sequence[position_start:position_inter-1] + variant[int(vcf_slice.loc[position_row][sample])]
             position_start = position_inter
 
         #for redefine bin in sample
@@ -98,6 +116,14 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
         used = []
         flag = False
         sample_lst = []
+
+        for sample in sample_will_deleted:
+            print(sample_dict)
+            del sample_dict[sample]
+            sample_bin_dict[sample] = '.'
+        print(sample_dict,sample_bin_dict)
+
+
         for sample in sample_dict:
             if all(vcf_slice[sample].astype(int) == 0): #!need check . values        
                 sample_bin_dict[sample] = 0
@@ -147,7 +173,7 @@ def definer_overlap_window(vcf):
                 over = position_row2+len(vcf.loc[position_row2]['REF'])-1
                 if over > window_sum: 
                     window_sum = over
-                    print(over - position_row)
+                    #print(over - position_row)
 
                     if over - position_row>1000:#for filter large variant
                         break
@@ -174,6 +200,8 @@ print('interval_noexact =',interval_noexact)
 
 
 vcf_merged = merge_window(interval_noexact,vcf.copy(),contig)
+#vcf_merged = merge_window([[81,85]],vcf.copy(),contig)
+
 #vcf_merged = merge_window([[100,109]],vcf.copy(),contig,)
 
 #vcf_merged.to_csv('/home/strain4/Desktop/test_split/test_split_m2.vcf',sep='\t')
