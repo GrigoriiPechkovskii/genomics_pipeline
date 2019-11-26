@@ -28,15 +28,25 @@ def intervals_concat(intervals_path):
 def vcf_correcter(vcf,intervals_full):
 
     assemble_names = list(vcf.columns[9:])
+    print(assemble_names)
     for pos in vcf.index:
-        intervals_slice_contain = intervals_full[(intervals_full[ref_assemble_name + '_start'] <= pos) & (intervals_full[ref_assemble_name + '_end'] >= pos)]
+        pos_end = pos + len(vcf.loc[pos,'REF']) - 1
+        #intervals_slice_contain = intervals_full[(intervals_full[ref_assemble_name + '_start'] <= pos) & (pos_end <= intervals_full[ref_assemble_name + '_end'])]
+        intervals_slice_contain = intervals_full[( pos_end >=  intervals_full[ref_assemble_name + '_start']) & (pos <= intervals_full[ref_assemble_name + '_end'])]
         for assemble_name in assemble_names:
+            print(pos,pos_end,assemble_name)
+            #print(intervals_slice_contain)
             if vcf.loc[pos,assemble_name] == '.':
+                print(intervals_slice_contain)
+                #print(intervals_slice_contain[assemble_name + '_start'].notna(),intervals_slice_contain[assemble_name + '_start'] != 0)
+                print(all(intervals_slice_contain[assemble_name + '_start'][intervals_slice_contain[assemble_name + '_start'].notna()] != 0))
+
                 if assemble_name + '_start' not in intervals_slice_contain.columns:
                     #assert assemble_name + '_start' in intervals_slice_contain.columns, 'Warning assemble ' + assemble_name  + ' not in intervals'
                     continue
                     print('Warning assemble',assemble_name,'not in intervals')
-                elif  any(intervals_slice_contain[assemble_name + '_start'].notna()):
+                #elif  any(intervals_slice_contain[assemble_name + '_start'].notna()) or any(intervals_slice_contain[assemble_name + '_start'] != 0):#!!!!!
+                elif all(intervals_slice_contain[assemble_name + '_start'][intervals_slice_contain[assemble_name + '_start'].notna()] != 0):
                     vcf.at[pos,assemble_name] = '0'
     return vcf
         
