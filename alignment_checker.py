@@ -54,6 +54,6 @@ intervals_full = intervals_concat(intervals_path)
 
 vcf = vcf_correcter(vcf,intervals_full)
 
-vcf.to_csv('/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker2.vcf',sep='\t',index=False)
+vcf.to_csv('/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker3.vcf',sep='\t',index=False)
 
 print('end')

@@ -7,7 +7,7 @@ print('start')
 pd.set_option('display.max_columns', 20)
 
 file_intervals1 = '/home/strain4/Desktop/genomics_pipline/interval1.txt'
-file_intervals2 = '/home/strain4/Desktop/genomics_pipline/interval2.txt'
+file_intervals2 = '/home/strain4/Desktop/genomics_pipline/interval3.txt'
 
 intervals_path = [i for i in os.listdir() if 'interval' in i]
 
@@ -15,7 +15,8 @@ intervals_path = [i for i in os.listdir() if 'interval' in i]
 file_fasta = '/home/strain4/Desktop/genomics_pipline/test_mini_vcf.fna'
 file_fasta = '/home/strain4/Desktop/genomics_pipline/test_merger.fna'
 file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger.vcf'
-file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker2.vcf'
+file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker4.vcf'
+file_vcf = '/home/strain4/Desktop/genomics_pipline/test_merger_alignment_checker3.vcf'
 
 
 contig = 'A'
@@ -70,8 +71,19 @@ sequence = fasta.seq_lst[0]
 def merge_window(intervals,vcf,contig,ref_sequence=sequence):
     '''Функция которая обьединяет заданое окно в vcf файле по позициям'''
     global vcf_slice
-
+    intervals_used = []
     for pos_start,pos_end in intervals:
+
+        
+
+        if any([pos_start_used <= pos_start <= pos_end_used for pos_start_used,pos_end_used in intervals_used]):
+            print('Warning this interval used!',[pos_start,pos_end])
+            continue
+
+        intervals_used.append([pos_start,pos_end])
+        print('INTERVALS===',[pos_start,pos_end])
+
+
         print(pos_start,pos_end)
     
         vcf_slice = vcf[(pos_start <= vcf['POS']) & (vcf['POS'] <= pos_end) & (vcf['#CHROM']==contig)]
@@ -79,14 +91,24 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
         vcf_slice_end = vcf[(vcf['POS'] > pos_end) & (vcf['#CHROM']==contig)]
         position_outside = int(vcf_slice_end.iloc[0]['POS'])
 
-        sample_dict = {i:'' for i in vcf_slice.iloc[:,9:]}
+        #sample_dict = {i:'' for i in vcf_slice.iloc[:,9:]}
+
+        sample_dict_mem = {i:0 for i in vcf_slice.iloc[:,9:]}
+
         sample_bin_dict = {i:None for i in vcf_slice.iloc[:,9:]}
 
         position_first = int(vcf_slice.iloc[0]['POS'])
         position_start = int(vcf_slice.iloc[0]['POS'])
         position_last = int(vcf_slice.iloc[-1]['POS'])
 
-        max_over = max([len(ref) + pos -1 for ref,pos in zip(vcf_slice['REF'],vcf_slice.index)])
+
+        max_over = max([len(ref) + pos - 1 for ref,pos in zip(vcf_slice['REF'],vcf_slice.index)])
+
+
+        sample_dict = {i:list(sequence[position_first-1:max_over]) for i in vcf_slice.iloc[:,9:]}
+        sample_dict_mem = {i:position_first for i in vcf_slice.iloc[:,9:]}
+
+        print('position_first=',position_first,'max_over=',max_over,'sample_dict=',sample_dict,vcf_slice.index)
 
         position_last = max_over
 
@@ -112,9 +134,9 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
 
         variant = []
         sample_will_deleted = set()
+        print('st=',sample_dict)
         for position_row in vcf_slice.index:
             variant = [vcf_slice.loc[position_row]['REF']] + vcf_slice.loc[position_row]['ALT'].split(',')
-            print(variant)
             position_inter = int(vcf_slice.loc[position_row]['POS'])
             #vcf.loc[position_row,'REF'] = ref_mod #maybe need
             for sample in sample_dict:
@@ -122,15 +144,46 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
                 if vcf_slice.loc[position_row][sample] == '.':
                     sample_dict[sample]
                     sample_will_deleted.add(sample)
-                    #print(sample_dict,vcf_slice.loc[position_row][sample])
                 else:
-                    #print(variant)
-                    sample_dict[sample] += sequence[position_start:position_inter-1] + variant[int(vcf_slice.loc[position_row][sample])]
-            position_start = position_inter
+                    #if sample_dict_mem[sample] > position_row:
+                        #print(position_inter)
+                    #if sample_dict_mem[sample] < max_over and int(vcf_slice.loc[position_row][sample]) != 0 or True:
+                    if int(vcf_slice.loc[position_row][sample]) != 0:
+                        #if vcf_slice.loc[position_row][sample] == '0' or vcf_slice.loc[position_row][sample] == 0:# !type
+                            #continue
+                        #else:
+                            #n = max_over - position_row
+                        n = position_row - position_first
+                        m = len(variant[int(vcf_slice.loc[position_row][sample])])
+                        r_l = len(vcf_slice.loc[position_row]['REF'])
+                        
+                        print('m=', len(variant[int(vcf_slice.loc[position_row][sample])]),'r_l=',r_l,'n=',n)
+                        if len(variant[int(vcf_slice.loc[position_row][sample])]) == r_l:#!
 
+                            sample_dict[sample][n:n+r_l] =  [list(variant[int(vcf_slice.loc[position_row][sample])])]
+
+                        elif len(variant[int(vcf_slice.loc[position_row][sample])]) != r_l:
+                            print('+++',list(variant[int(vcf_slice.loc[position_row][sample])]) + [''] * (r_l - m ))
+                            #sample_dict[sample][n:n+r_l] = list(variant[int(vcf_slice.loc[position_row][sample])]) + [''] * (r_l - m)
+                            
+                            sample_dict[sample][n:n+r_l] = [list(variant[int(vcf_slice.loc[position_row][sample])])] + [''] * (r_l - 1)
+                            
+
+                        sample_dict_mem[sample] += len(vcf_slice.loc[position_row]['REF'])
+                            
+                        print('f=',sample,position_row,sample_dict,'\n',sample_dict_mem,variant[int(vcf_slice.loc[position_row][sample])],vcf_slice.loc[position_row][sample],'\n',position_start,position_inter)
+
+                    else:
+                        print('sample_dict_mem[sample] >= max_over',sample_dict_mem[sample],max_over,'alt=',int(vcf_slice.loc[position_row][sample]),'sample=',sample)
+                        continue
+            print('end circle',sample_dict,'\n',sample_dict_mem,variant[int(vcf_slice.loc[position_row][sample])],vcf_slice.loc[position_row][sample],'\n',position_start,position_inter)
+
+            position_start = position_inter
+        
         #for redefine bin in sample
         bin_value = 1
         used = []
+        used_bin = []
         flag = False
         sample_lst = []
 
@@ -138,6 +191,14 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
             del sample_dict[sample]
             sample_bin_dict[sample] = '.'
 
+        print('3',sample_dict)
+
+
+        for sample in sample_dict:
+            sample_dict[sample] = [i if type(i) == str else ''.join(i) for i in sample_dict[sample]]
+        sample_dict = {i:''.join(j) for i,j in sample_dict.items()}
+
+        print('4',sample_dict)
 
         for sample in sample_dict:
             if all(vcf_slice[sample].astype(int) == 0): #!need check . values        
@@ -145,34 +206,33 @@ def merge_window(intervals,vcf,contig,ref_sequence=sequence):
             else:
                 if sample not in used:
                     for sample_compared in sample_dict:
-                        if vcf_slice.iloc[:,9:][sample_compared].equals(vcf_slice.iloc[:,9:][sample]) and sample_compared not in used:
+                        if (vcf_slice.iloc[:,9:][sample_compared].astype(int)).equals(vcf_slice.iloc[:,9:][sample].astype(int)) and sample_compared not in used:# and list(vcf_slice.iloc[:,9:][sample_compared].values) not in used_bin:# and sample_compared != sample:
                             sample_bin_dict[sample_compared] = bin_value
                             used += [sample_compared]
+                            used_bin.append(list(vcf_slice.iloc[:,9:][sample_compared].values))
                             flag = True
                 if flag == True:
+
                     sample_lst += [sample_dict[sample]]
                     bin_value += 1
                     flag = False
 
         alt = ','.join(sample_lst)
-
         info = 'INDEL'
         vcf_variant_dict = {'#CHROM':contig,'POS':position_first,'ID':'.','REF':ref_mod,
                     'ALT':alt,'QUAL':40,'FILTER':'PASS','INFO':info,'FORMAT':'GT'}
         vcf_variant_dict.update(sample_bin_dict)
         #print('vcf_variant_dict=',vcf_variant_dict)
 
-        for_merged = pd.Series(vcf_variant_dict)
+        for_merged = pd.Series(vcf_variant_dict,name=position_first)
         vcf.drop(vcf_slice.index,inplace=True)
         #vcf_merged = vcf.append(for_merged,ignore_index=True)
-        vcf = vcf.append(for_merged,ignore_index=True)
+        vcf = vcf.append(for_merged,ignore_index=False)#!True
 
     vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True],inplace=True)
 
     return vcf
 
-#vcf_merged = merge_window([[100,109]],contig,vcf.copy())
-#vcf_merged = merge_window(294715,294722,'NC_007530')
 
 def definer_overlap_window(vcf):
     over = 0
@@ -184,47 +244,22 @@ def definer_overlap_window(vcf):
         interval2 = []
         window_sum = position_row + len(vcf.loc[position_row]['REF'])-1 
         for position_row2 in vcf.index[num+1:]:
-            #print('loop1=','position_row=',position_row,'window_sum=',window_sum,'position_row2=',position_row2,'over=',over)            
-
             if position_row2 <= window_sum:
-
-                #if any(vcf.loc[position_row2][9:] == '.'):
-                #    continue
-
                 over = position_row2+len(vcf.loc[position_row2]['REF'])-1
-                #print('loop2=','position_row=',position_row,'window_sum=',window_sum,'position_row2=',position_row2,'over=',over)            
                 if over > window_sum:
                     window_sum = over
 
-                #interval = [position_row,window_sum]
-                #interval2 = [position_row,position_row2]
-
                 vcf_slice = vcf[(position_row <= vcf['POS']) & (vcf['POS'] <= position_row2) & (vcf['#CHROM']==contig)]
                 if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
-                    #print('EEEE3',vcf_slice)
                     break
                 interval = [position_row,window_sum]
-                interval2 = [position_row,position_row2]                
-
+                interval2 = [position_row,position_row2]
             else:
-                #vcf_slice = vcf[(position_row <= vcf['POS']) & (vcf['POS'] <= window_sum) & (vcf['#CHROM']==contig)]
-                #if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
-                #    print('position_row=',position_row,'over=',over,'window_sum=',window_sum)
-                #    print('EEEE2',vcf_slice)
-                #    interval = []
-                #    interval2 = []
                 break
 
         if over - position_row>1000:#for filter large variant
             break
-
-        #if interval or interval2:
-        #    vcf_slice = vcf[(interval2[0] <= vcf['POS']) & (vcf['POS'] <= interval2[1]) & (vcf['#CHROM']==contig)]
-        #    if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
-        #        print('EEEE4',vcf_slice)
-        #        break
-
-        #print('interval=',interval)
+        
         if interval:
             interval_noexact.append(interval)
             
@@ -246,35 +281,12 @@ intervals_alignment = intervals_concat(intervals_path)
 
 interval_exact,interval_noexact = definer_overlap_window(vcf)
 
-'''for interval in interval_noexact:
-    intervals_alignment_slice = intervals_alignment[(intervals_alignment['A_start'] < interval[0]) & (interval[1] < intervals_alignment['A_end'])]
-    
-    #if not all(vcf_slice[sample].isin(['.'])) and not all(~vcf_slice[sample].isin(['.']))
-    #(~(intervals_alignment_slice == 0)).all(axis=1)
-    #(intervals_alignment_slice == 0).all(axis=1)
-    (intervals_alignment_slice == 0 | intervals_alignment_slice.isna())
-    (intervals_alignment_slice == 0 | intervals_alignment_slice.isna()).all(axis=1)
-    if any((intervals_alignment_slice == 0).any(axis=1)):
-    #if not all((~(intervals_alignment_slice == 0)).all(axis=1)) and not all((intervals_alignment_slice == 0).all(axis=1)):
-        print('cool')
-    else:
-        print('no')'''
+print('interval_noexact =',interval_noexact,'interval_exact=',interval_exact)
 
 
-
-    #print(intervals_alignment_slice)
-
-#print(interval_exact)
-print('interval_noexact =',interval_noexact)
-
-
-#vcf_merged = merge_window(interval_noexact,vcf.copy(),contig)
-vcf_merged = merge_window([[100,103]],vcf.copy(),contig)
-
-#vcf_merged = merge_window([[81,85]],vcf.copy(),contig)
-
-#vcf_merged = merge_window([[100,109]],vcf.copy(),contig,)
-
+#vcf_merged = merge_window(interval_exact,vcf.copy(),contig)
+#vcf_merged = merge_window([[100,107]],vcf.copy(),contig)
+vcf_merged = merge_window([[161,170]],vcf.copy(),contig)
 #vcf_merged.to_csv('/home/strain4/Desktop/test_split/test_split_m2.vcf',sep='\t')
 
 
