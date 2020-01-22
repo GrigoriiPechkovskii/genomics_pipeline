@@ -24,7 +24,7 @@ import pandas as pd
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-x', '--xmfa',action='store', help='File xmfa')
-parser.add_argument('-r', '--ref',action='store', help='Reference')
+parser.add_argument('-r', '--ref',action='store', help='Reference fasta')
 parser.add_argument('-d', '--dir',action='store', help='Work directory')
 parser.add_argument('-o', '--out-dir',action='store',default=os.getcwd(), help='Out directory')
 parser.add_argument('-i', '--index-type',action='store',default='mauve', help="Index type 'mauve' or 'parsnp'")
@@ -42,33 +42,36 @@ name_vcf = parser.parse_args().name_vcf
 if not os.access(directory_out,os.F_OK):
     os.mkdir(directory_out)
 
-if True:
+if False:
     directory = os.getcwd()
     directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
+
+    directory_file_xmfa = directory + '/' + 'test_mini.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/parsnp.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/mauve_out1.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
-    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_1'
+    #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_1'
 
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
     #REF ='AmesAncestor_GCF_0000084451'
-    REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
     #REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
-    directory_out = os.getcwd()
+    directory_out = directory
 
 
     index_type = 'mauve'
     #name_vcf_simple = 'test_sim.vcf'
 
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    name_vcf = 'test3.vcf'
+    name_vcf = 'test_mini_1.vcf'
 
+#some important options
 sort = True
 delete_ref = True
-
+NORM = True
 
 if index_type == 'parsnp':    
     pos_vcf = 1
@@ -438,7 +441,7 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
         if (len(set(sym_seq)) == 1 and len(sym_seq_lst) != 0) or sym_num == len(ref_seq)-1:#here break
             ref_flag = True
             if sym_num == len(ref_seq)-1 and (len(set(sym_seq)) == 1):#why
-                print('WARNING break in diffinder')
+                #print('WARNING break in diffinder')
                 break
 
 
@@ -491,9 +494,47 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
 def dif_process(seq_lst,position,info='NANinfo'):
     variance_bin_dict = dict()
     #info = 'NANinfo'
-    name_str_dict = {x: "NAN" for x in id_nameseq_dict_val}
+    name_str_dict = {x: "." for x in id_nameseq_dict_val}#NAN
     variance_lst = join_dif(list((zip(*seq_lst))))
     variance_set = set((zip(*seq_lst)))
+
+    variance_lst = [i.replace('-','') for i in variance_lst]
+    #print('variance_lst_befor=',variance_lst)
+    
+    if NORM:
+        #print('variance_lst_befor=',variance_lst,position,info)
+        if info != 'REPEAT' and info != 'SNR':
+            slice_del_start = 0
+            slice_del_end = 0
+            first_flag_var = True
+            for var in zip(*variance_lst):
+                #print(set(var))
+                if len(set(var))==1:
+                    if first_flag_var:
+                        first_flag_var = False            
+                        continue
+                    else:
+                        slice_del_start += 1            
+                else:
+                    break
+
+            variance_lst = [i[slice_del_start:] for i in variance_lst]
+
+            for var_rev in zip(*[i[::-1] for i in variance_lst]):
+                if len(set(var_rev))==1 and min(map(len,variance_lst))-1>-slice_del_end:#slice_del_start>-slice_del_end:
+                    slice_del_end -= 1
+                else:
+                    break
+
+
+            slice_del_end = None if slice_del_end==0 else slice_del_end
+
+            variance_lst = [i[:slice_del_end] for i in variance_lst]
+            position += slice_del_start
+
+    if any([i=='' for i in variance_lst]):
+        print('Error variance = None(blank)',variance_lst)
+    #print('variance_lst_after=',variance_lst,position,info)#slice_del_start,slice_del_end)
 
     alt_variance_set  = set()
     alt_variance_dict = dict()
@@ -503,22 +544,38 @@ def dif_process(seq_lst,position,info='NANinfo'):
 
     alt_num = 1
     alt_variance_dict[reference_variance] = '0'
-
+    #alt_variance_dict[reference_variance.replace('-','')] = '0'
     alt_variance_set.add(reference_variance)
+    #alt_variance_set.add(reference_variance.replace('-',''))
 
     for variance in variance_lst[1:]:
+        #variance = variance.replace('-','')
         if variance not in alt_variance_set:
 
             alt_variance_set.add(variance)
             alt_variance_dict[variance] = str(alt_num)
             alt_num += 1
 
+    #print('alt_variance_dict0=',alt_variance_dict,position,info)
+
+    #lst_alt = list(alt_variance_dict)
+    #for alt in lst_alt[1:]:
+    #    if lst_alt[0].replace('-','') == alt.replace('-',''):
+    #        print('del=',lst_alt[0],alt)
+    #        del 
+
     for variance_n in range(len(variance_lst)):
         name_str_dict[pos_set[1][variance_n]] = variance_lst[variance_n]
 
+    #print('1')
+    #print(pos_set[1],'\n','name_str_dict1=',name_str_dict,position,variance_n,info)
+
     for name in name_str_dict:
-        if name_str_dict[name] != 'NAN':
+        if name_str_dict[name] != '.':#NAN
             name_str_dict[name] = alt_variance_dict[name_str_dict[name]]
+
+    #print('2')
+    #print('name_str_dict2=',name_str_dict,position,info)
 
     #print(any(('N' in s for s in list(alt_variance_dict.keys()))))
     #print(list(alt_variance_dict.keys()))
@@ -691,6 +748,7 @@ def variance_calling():
                 #print(dif_set)
                 #variance
                 name_str_dict,variance,position,info = dif_process(dif_set[1],dif_set[0],dif_set[2])
+                #print(name_str_dict,variance,position,info)
                 
                 #if pos_set[2][0] == '-':
                     #print(position,int(pos_set[0][0][0])- (int(position)-int(pos_set[0][0][0])))
@@ -699,11 +757,11 @@ def variance_calling():
                 contig,position_real = contig_definder(position,find_locus,find_source)
                 #contig = pos_set[1][0]
 
-                with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
-                    print(info,name_str_dict,variance,position,position_real,file=alt_variance_dict_file)
+                #with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
+                #    print(info,name_str_dict,variance,position,position_real,file=alt_variance_dict_file)
                 bin_var = '\t'.join(name_str_dict.values())
                 #!position_real
-                columns_vcf =[contig,str(position_real),'.',variance[0],','.join(variance[1:]),
+                columns_vcf =[contig,str(position),'.',variance[0],','.join(variance[1:]),
                     '40','PASS',info,'GT',bin_var]                  
                 
                 columns_vcf = '\t'.join(columns_vcf)
@@ -728,7 +786,8 @@ if sort:
             if '##' in line:
                n_comment += 1
     df_vcf = pd.read_csv(directory_out +'/'+name_vcf,sep='\t',header=n_comment)
-    df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
+    #df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
+    df_vcf = df_vcf.sort_values(by=['POS','#CHROM'],ascending=[True,False])
 
     if delete_ref:
         del df_vcf[REF]
