@@ -22,10 +22,12 @@ out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
 
 work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
 REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A1'
-out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA1_test/' # / impotant
+name_exp = 'exp_A3'
+out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA3_test/' # / impotant
 file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
 header = 15
+BED = True
+
 
 def contig_finder_gbk(file_gbk_dir):
     ''' '''
@@ -244,8 +246,13 @@ elif not with_norm:
 #del vcf_path_lst_gz[-1]# without add all
 #err = open("/home/strain4/Desktop/piplene_mauve/work_dir/out/err.txt",'a' )
 
-#del whole path interval 
-intervals_path = [vcf_out+i for i in os.listdir(vcf_out) if 'interval' in i]
+#del whole path interval
+
+if BED:
+    intervals_path = [vcf_out+i for i in os.listdir(vcf_out) if '.bed' in i]
+else:
+    intervals_path = [vcf_out+i for i in os.listdir(vcf_out) if 'interval' in i]
+
 '''
 for n_intervals in  range(len(intervals_path)):
     if name_exp + '_' + 'group_' + str(num) in intervals_path[n_intervals]:
@@ -259,7 +266,8 @@ with open(merged_vcf_path,'a') as file_merged:
     bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged)#,stderr=logfile)
     bcftools_run.wait()
 
-    
+
+
 print('START vcf_merger')
 merged_final = vcf_out +  'merged_final.vcf'
 vcf_merger_run = subprocess.Popen([vcf_merger,

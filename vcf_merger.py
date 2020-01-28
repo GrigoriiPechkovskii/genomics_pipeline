@@ -5,9 +5,13 @@
 import os
 import re
 import argparse
+import time
+import timeit
 
 import numpy as np
 import pandas as pd
+
+pd.set_option('display.max_columns', 25)
 
 print('start')
 
@@ -35,10 +39,6 @@ log_file_path = parser.parse_args().log
 header = int(parser.parse_args().header_vcf)
 out_file = parser.parse_args().out_file
 
-#intervals_path = parser.parse_args().interval.split(',')
-
-#print(intervals_path)
-
 
 
 
@@ -57,21 +57,31 @@ ref_assemble_name = 'A'''
 
 local = False
 test = True
+
+if not(local or test):
+    intervals_path = parser.parse_args().interval.split(',')
+    print('intervals_path=',intervals_path)
+    ref_assemble_name = os.path.basename(file_fasta)[:-4]
+
+
 if local:
     directory = os.getcwd()
-    file_vcf = 'C:\\Users\\Grin\\Desktop\\final_data\\GI_AAK\\merged_21.vcf'
-    file_fasta = 'C:\\Users\\Grin\\Desktop\\final_data\\GI_AAK\\GCF_000008445.1_ASM844v1_genomic.fna'
-    file_gbk = "C:\\Users\\Grin\\Desktop\\final_data\\GI_AAK\\AmesAncestor_GCF_000008445.1.gbk"
-    work_dir = 'C:\\Users\\Grin\\Desktop\\final_data\\vcf_out_21'
-    out_file = 'C:\\Users\\Grin\\Desktop\\final_data\\GI_AAK\\test_merger_final4444.vcf'
-    log_file_path = work_dir + '\\' + 'log_test4444.txt'
+    file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/merged.vcf'
+    file_fasta = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
+    file_gbk = directory + '/test/' + 'AmesAncestor_GCF_000008445.1.gbk'
+    work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out'
+    out_file = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/vcf_merged_5555.vcf'
+    log_file_path = work_dir + '/' + 'log_test4444.txt'
     header = 15
-    intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if 'interval' in i]
+
+    #intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if 'interval' in i]
+    intervals_path = ['/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_0.bed', '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_1.bed']
+
 
     #del intervals_path[2]
 
-    #ref_assemble_name = os.path.basename(file_fasta)[:-4]
-#ref_assemble_name = os.path.basename(file_fasta)[:-4]
+    ref_assemble_name = os.path.basename(file_fasta)[:-4]
+
 
 if test:
     directory = os.getcwd()
@@ -91,7 +101,9 @@ if test:
     header = 5
     ref_assemble_name = 'A'
     out_file = work_dir + '/' + 'test_merger.vcf'
-    intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if 'interval' in i]
+
+    intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if '.bed' in i]
+    #intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if 'interval' in i]
 
 
 log_file = open(log_file_path,'a')
@@ -154,6 +166,7 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
         
         
         contig = vcf.loc[pos_start,'#CHROM']
+        #contig = 'NC_007530'
 
         vcf_slice = vcf[(pos_start <= vcf['POS']) & (vcf['POS'] <= pos_end) & (vcf['#CHROM']==contig)]       
 
@@ -226,15 +239,18 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
         
         #print('st=',sample_dict)
         for position_row in vcf_slice.index:
+            #print('position_row',position_row)
             variant = [vcf_slice.loc[position_row]['REF']] + vcf_slice.loc[position_row]['ALT'].split(',')
             position_inter = int(vcf_slice.loc[position_row]['POS'])
             #vcf.loc[position_row,'REF'] = ref_mod #maybe need
             for sample in sample_dict:
+                #print('sample',sample)
 
                 if vcf_slice.loc[position_row][sample] == '.':
                     sample_dict[sample]
                     sample_will_deleted.add(sample)
                 else:
+                    #print('sample_else',sample)
                     #if sample_dict_mem[sample] > position_row:
                         #print(position_inter)
                     #if sample_dict_mem[sample] < max_over and int(vcf_slice.loc[position_row][sample]) != 0 or True:
@@ -255,35 +271,43 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
                             break
                             #print(sample,sample_dict)                            
 
-                        
+                        #for cut end sequence maybe                        
                         ref_var = vcf_slice.loc[position_row]['REF']
                         alt_var = variant[int(vcf_slice.loc[position_row][sample])]
+                        #if len(ref_var)>1 or len(alt_var)>1:
                         alt_cut = 0
+                        '''
                         for sym_ref, sym_alt in zip(ref_var[::-1],alt_var[::-1]):
                             if sym_ref == sym_alt:
-                                ref_len -= 1
-                                alt_cut -= 1
+                                pass
+                                #ref_len -= 1
+                                #alt_cut -= 1
                                 #alt_var = alt_var[:-1]
                             else:
                                 break
+                        '''
                         alt_cut = None if alt_cut==0 else alt_cut
 
 
+                        #print('sample_dict1=',sample,sample_dict,position_row_shift,position_row_shift+ref_len,ref_len)
                         if len(variant[int(vcf_slice.loc[position_row][sample])]) == ref_len:#!
+                            #print('if')
 
                             sample_dict[sample][position_row_shift:position_row_shift+ref_len] =  ([list(variant[int(vcf_slice.loc[position_row][sample])])])[:alt_cut]
 
                         elif len(variant[int(vcf_slice.loc[position_row][sample])]) != ref_len:
+                            #print('elif')
                             sample_dict[sample][position_row_shift:position_row_shift+ref_len] = ([list(variant[int(vcf_slice.loc[position_row][sample])])])[:alt_cut] + [''] * (ref_len - 1) #(len(sample_dict[sample][position_row_shift:position_row_shift+ref_len]) - 1)
                             
                         sample_dict_mem[sample] += len(vcf_slice.loc[position_row]['REF'])
+
 
                             
                     else:
                         continue
             position_start = position_inter       
         
-        
+        #print('sample_dict3=',sample_dict)
         if flag_ignored:
             continue
 
@@ -401,7 +425,15 @@ def intervals_concat(intervals_path):
 
     return intervals_full
 
-def vcf_correcter_old(vcf,intervals_full):
+
+def intervals_concat_bed(intervals_path):
+    '''intervals_path = list of path file interval'''
+    intervals = pd.DataFrame()
+    intervals_full = intervals.append([pd.read_csv(path_bed,sep='\t') for path_bed in intervals_path],ignore_index=True,sort=False)
+
+    return intervals_full
+
+def vcf_corrector_old(vcf,intervals_full):
     sum_0 = 0
     sum_NA = 0
     assemble_names = list(vcf.columns[9:])
@@ -439,28 +471,79 @@ def vcf_correcter_old(vcf,intervals_full):
     log_file.write('Sum variants determined as 0='+str(sum_0)+' , ' + 'Sum variants determined as NA='+str(sum_NA)+'\n')
 
     return vcf
-        
 
-def vcf_correcter(vcf,intervals_alignment):
+time_block_start = time.time()
+time_initial = time.time()
+def timecheck(name = 'name_check'):
+    '''TimeCheck for testing'''
+    global time_block_start
+    check_block_sec = round(time.time() - time_block_start,3)
+    check_block_min = round(check_block_sec / 60,3)
+
+    check_initial_sec = round(time.time() - time_initial,3)
+    check_initial_min = round(check_initial_sec / 60,3)       
+    report_line = '{0:.<30}{1:.<15}{2:.<10}{3:.<10}{4:.<10}'.format(name,check_block_sec,check_block_min,check_initial_sec,check_initial_min) + '\n'
+    print(report_line,end='')
+    #with open(HOME_DIRECTORY + 'time_report.txt','a') as time_report:
+    #    time_report.write(report_line)    
+    time_block_start = time.time()
+
+    return 
+
+def vcf_corrector_1ver(vcf,intervals_alignment):
     sum_0 = 0
     sum_NA = 0
     assemble_names = list(vcf.columns[9:])
     #print(assemble_names)
     for assemble_name in assemble_names:
-        print(assemble_name)
+        #print(assemble_name)
         assemble_slice = vcf[vcf[assemble_name].astype(str).eq('.')]
         assemble_slice_full  = vcf[assemble_name].copy()
         #assemble_slice = vcf[assemble_name][vcf[assemble_name].astype(str).eq('.')].copy()
         assemble_slice_pos = assemble_slice[assemble_name].copy()
         pos_end_array = assemble_slice[assemble_name].index + assemble_slice['REF'].map(len) - 1
-
+        #print(assemble_slice)
         for pos in assemble_slice_pos.index:
             pos_end = pos_end_array[pos]
             intervals_slice_contain = intervals_alignment[( pos_end >=  intervals_alignment[ref_assemble_name + '_start']) & (pos <= intervals_alignment[ref_assemble_name + '_end'])]
-            #print(pos)
+            #print(pos,pos_end,intervals_slice_contain,'\n\n\n')
             if assemble_name + '_start' not in intervals_slice_contain.columns:
                 #assert assemble_name + '_start' in intervals_slice_contain.columns, 'Warning assemble ' + assemble_name  + ' not in intervals'
-                print('Error assemble',assemble_name,'not in intervals')
+                
+                #print('Error assemble',assemble_name,'not in intervals')
+                log_file.write('Error assemble '+assemble_name+' not in intervals'+'\n')
+                continue
+            if all(intervals_slice_contain[assemble_name + '_start'][intervals_slice_contain[assemble_name + '_start'].notna()] != 0):
+                #assemble_slice_pos[pos] = 0
+                assemble_slice_full[pos] = 0
+                sum_0 += 1
+            else:
+                sum_NA += 1
+
+        vcf[assemble_name] = assemble_slice_full
+    return vcf
+
+def vcf_corrector_2ver(vcf,intervals_alignment):
+    sum_0 = 0
+    sum_NA = 0
+    assemble_names = list(vcf.columns[9:])
+    #print(assemble_names)
+    for assemble_name in assemble_names:
+        #print(assemble_name)
+        assemble_slice = vcf[assemble_name][vcf[assemble_name].astype(str).eq('.')]
+        assemble_slice_full  = vcf[assemble_name].copy()
+        #assemble_slice = vcf[assemble_name][vcf[assemble_name].astype(str).eq('.')].copy()
+        #assemble_slice_pos = assemble_slice[assemble_name].copy()
+        pos_end_array = assemble_slice.index + vcf.loc[assemble_slice.index]['REF'].map(len) - 1
+        #print(assemble_slice)
+        for pos in assemble_slice.index:
+            pos_end = pos_end_array[pos]
+            intervals_slice_contain = intervals_alignment[( pos_end >=  intervals_alignment[ref_assemble_name + '_start']) & (pos <= intervals_alignment[ref_assemble_name + '_end'])]
+            #print(pos,pos_end,intervals_slice_contain,'\n\n\n')
+            if assemble_name + '_start' not in intervals_slice_contain.columns:
+                #assert assemble_name + '_start' in intervals_slice_contain.columns, 'Warning assemble ' + assemble_name  + ' not in intervals'
+                
+                #print('Error assemble',assemble_name,'not in intervals')
                 log_file.write('Error assemble '+assemble_name+' not in intervals'+'\n')
                 continue
             if all(intervals_slice_contain[assemble_name + '_start'][intervals_slice_contain[assemble_name + '_start'].notna()] != 0):
@@ -474,7 +557,22 @@ def vcf_correcter(vcf,intervals_alignment):
 
     return vcf
 
-        #vcf['D'].copy()[[100,170]].update(pd.Series([4]),index=[100])
+
+def vcf_corrector_bed(vcf,intervals_alignment):
+    sum_0 = 0
+    sum_NA = 0
+    assemble_names = list(vcf.columns[9:])
+    for index,bedline in intervals_alignment.iterrows():
+        if bedline['name'] in vcf.columns:
+            if (bedline['start_position_ref']!=0 or bedline['end_position_ref']!=0) and (bedline['start_position_alt']!=0 or bedline['end_position_alt']!=0):
+                vcf.loc[(vcf['POS']>=bedline['start_position_ref']) & (vcf['POS']<=bedline['end_position_ref']) & (vcf[bedline['name']]=='.'),bedline['name']] = 0
+                sum_0+=1
+            else:
+                sum_NA+=1
+        else:
+            pass
+    return vcf
+
 
 def contig_finder_gbk(file_gbk_dir):
     ''' '''
@@ -508,37 +606,61 @@ def position_editer(vcf):
     vcf.index = vcf['POS']
     return vcf
 
-
 vcf = pd.read_csv(file_vcf,sep='\t',header = header)#!15
 vcf.index =vcf['POS'].values
 
 log_file = open(log_file_path,'a')
-log_file.write('\n'+'Start vcf_correcter'+'\n\n')
+log_file.write('\n'+'Start vcf_corrector'+'\n\n')
 print('\n'+'Start intervals_concat'+'\n\n')
-intervals_alignment = intervals_concat(intervals_path)
+#intervals_alignment = intervals_concat(intervals_path)
 
 
+intervals_alignment = intervals_concat_bed(intervals_path)
+
+#intervals_alignment = pd.read_csv('/home/strain4/Desktop/fin_script/genomics_pipline/test/bed1.bed',sep='\t',header = 0)#!15
 #vcf.update(assemble_slice_pos)
 
+timecheck('first')
 
-print('\n'+'Start vcf_correcter'+'\n\n')
-vcf = vcf_correcter(vcf,intervals_alignment)
+print('\n'+'Start vcf_corrector'+'\n\n')
+#vcf_correct_bed = vcf_corrector_bed(vcf.copy(),intervals_alignment)
+
+timecheck('vcf_corrector_bed_before')
+for i in range(1):
+    vcf_correct_bed = vcf_corrector_bed(vcf.copy(),intervals_alignment)
+timecheck('vcf_corrector_bed_after')
+
+'''
+intervals_alignment = intervals_concat(intervals_path)
+timecheck('vcf_corrector1_before')
+for i in range(1):
+    vcf_correct = vcf_corrector_1ver(vcf.copy(),intervals_alignment)
+timecheck('vcf_corrector1_after')
+
+timecheck('vcf_corrector2_before')
+for i in range(1):
+    vcf_correct = vcf_corrector_2ver(vcf.copy(),intervals_alignment)
+timecheck('vcf_corrector2_after')
+'''
 
 log_file = open(log_file_path,'a')
 log_file.write('\n'+'Start definer_overlap_window'+'\n\n')
 print('\n'+'Start definer_overlap_window'+'\n\n')
-interval_exact,interval_noexact = definer_overlap_window(vcf)
+interval_exact,interval_noexact = definer_overlap_window(vcf_correct_bed)
 #print('interval_noexact =',interval_noexact,'interval_exact=',interval_exact)
 
 log_file = open(log_file_path,'a')
 log_file.write('\n'+'Start merge_window'+'\n\n')
 print('\n'+'Start merge_window'+'\n\n')
-vcf_merged = merge_window(interval_exact,vcf.copy())
-#vcf_merged = merge_window([[100, 110]],vcf.copy())
+vcf_merged = merge_window(interval_exact,vcf_correct_bed.copy(),fullcheck=False)
+#vcf_merged = merge_window([[226253, 226261],[85540,85551]],vcf_correct.copy())
+
 find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
 vcf_merged = position_editer(vcf_merged.copy())
 
 vcf_merged.to_csv(out_file,sep='\t',index=False)
 
 log_file.close()
+
+timecheck('end')
 print('end')
