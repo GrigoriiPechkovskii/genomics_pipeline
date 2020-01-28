@@ -52,12 +52,12 @@ if False:
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
     #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
-    #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/exp_1_group_1'
+    directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
 
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
     #REF ='AmesAncestor_GCF_0000084451'
-    #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
     #REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
     directory_out = directory
 
@@ -66,7 +66,7 @@ if False:
     #name_vcf_simple = 'test_sim.vcf'
 
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    name_vcf = 'test_mini_1.vcf'
+    name_vcf = 'test_exp_1_group_1.vcf'
 
 #some important options
 sort = True
@@ -686,7 +686,7 @@ def variance_calling():
     global seq_seq
     global interval_df
     global title_seq
-    bed_columns = ['#contig','start_positioin','end_position','name']
+    bed_columns = ['#contig','start_position_ref','end_position_ref','name','start_position_alt','end_position_alt']
     bed_df = pd.DataFrame(columns=bed_columns)
 
     for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
@@ -714,15 +714,25 @@ def variance_calling():
             #bed_df = pd.DataFrame(columns=['#contig','start_positioin','end_position','name'])            
             #bed.write('\t'.join(['#contig','start_positioin','end_position','name'])+'\n')
             bed_dic = {}
+            #print(pos_set)
             contig,position_real_f = contig_definder(int(pos_set[0][0][0]),find_locus,find_source)
             contig,position_real_s = contig_definder(int(pos_set[0][0][1]),find_locus,find_source)
-            for name in pos_set[1]:
+
+            position_real_f = pos_set[0][0][0]
+            position_real_s = pos_set[0][0][1]
+
+            for num,name in enumerate(pos_set[1]):
                 bed_str = [contig] + [str(position_real_f)] + [str(position_real_s)] + [name]
 
                 bed_dic['#contig'] = contig
-                bed_dic['start_positioin'] = str(position_real_f)
-                bed_dic['end_position'] = str(position_real_s)
+                bed_dic['start_position_ref'] = str(position_real_f)
+                bed_dic['end_position_ref'] = str(position_real_s)
+
                 bed_dic['name'] = name
+                bed_dic['start_position_alt'] = pos_set[0][num][0]
+                bed_dic['end_position_alt'] = pos_set[0][num][1]
+
+
                 bed_df = bed_df.append(bed_dic,ignore_index=True)
                 #bed.write('\t'.join(bed_str)+'\n')
             #bed.close()           
@@ -773,7 +783,7 @@ def variance_calling():
 
     #bed_df.index = bed_df['#contig']
     #del bed_df['#contig']
-    bed_df.sort_values(by=['#contig','start_positioin'],ascending=[False,True])
+    bed_df.sort_values(by=['#contig','start_position_ref'],ascending=[False,True])
     bed_df.to_csv(directory_out + '/' +name_vcf[:-4]+'.bed',sep='\t',index=False)
 
 
