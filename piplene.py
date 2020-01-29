@@ -20,14 +20,21 @@ name_exp = 'test'
 out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
 '''
 
-work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
-REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A3'
-out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA3_test/' # / impotant
-file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
-header = 15
-BED = True
+#work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
+#REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/V_cholerae_N16961.fna'
+#name_exp = 'exp_cholerae6'
+#out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_cholerae6_test/' # / impotant
+#file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/GCF_000006745.1_ASM674v1_genomic.gbk'
 
+
+work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/'
+REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/GCF_000008445.1_ASM844v1_genomic.fna'
+name_exp = 'exp_A7_test'
+out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A7_test/' # / impotant
+file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
+
+#header = 15
+BED = True
 
 def contig_finder_gbk(file_gbk_dir):
     ''' '''
@@ -197,10 +204,14 @@ for vcf_path in vcf_path_lst:
     vcf.drop(pos_will_del_old,inplace=True)    
     vcf.drop_duplicates(['POS'],keep=False, inplace=True)
 
+    #vcf[vcf['ALT'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X')]
+
     pos_will_del_old += dup_list
 
+
+
     logfile = open(logfile_path,'a')
-    logfile.write(str(pos_will_del_old))#!open
+    logfile.write('pos_will_del_old ' + str(pos_will_del_old))#!open
     logfile.close()
     logfile = open(logfile_path,'a')
     
@@ -260,12 +271,23 @@ for n_intervals in  range(len(intervals_path)):
         break'''
 
 #del intervals_path[]
-
+#!!!!for 1 do not work
 merged_vcf_path = vcf_out + 'merged.vcf'
 with open(merged_vcf_path,'a') as file_merged:
-    bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged)#,stderr=logfile)
+    bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
     bcftools_run.wait()
 
+
+#!!
+header = 0
+vcf_head = ''
+vcf_opened = open(merged_vcf_path)
+for line in vcf_opened:
+    if '##' in line:
+        vcf_head += line
+        header += 1
+vcf_opened.close()
+#header+=1
 
 
 print('START vcf_merger')
@@ -276,10 +298,9 @@ vcf_merger_run = subprocess.Popen([vcf_merger,
         "-g", file_gbk,
         "-d", vcf_out,
         "-l", logfile_path,
-        "-t", '15',
+        "-t", str(header),
         "-i",','.join(intervals_path),
-        "-o", merged_final        
-        ],universal_newlines=True)
+        "-o", merged_final],universal_newlines=True)
 vcf_merger_run.wait()
 
 '''parser.add_argument('-v', '--vcf',action='store', help='File vcf')

@@ -301,19 +301,21 @@ def definer_overlap_window(vcf):
         contig = vcf.loc[position_row,'#CHROM']
         interval = []
         interval2 = []
-        window_sum = position_row + len(vcf.loc[position_row]['REF'])-1 
+        window_sum = position_row + len(vcf.loc[position_row]['REF'])-1# + 5
+        #print(window_sum)
         for position_row2 in vcf.index[num+1:]:
             if position_row2 <= window_sum:
-                over = position_row2+len(vcf.loc[position_row2]['REF'])-1
-                if over > window_sum:
-                    window_sum = over
+                over = position_row2+len(vcf.loc[position_row2]['REF'])-1# + 5
+                #print('minus=',window_sum,over,window_sum - over)
+                if over > window_sum: #or 
+                    window_sum = over 
 
                 if window_sum - position_row>1000:
                     print('Warning interval contain large indel','interval ignored',[position_row,position_row2],'Indel lenght =',window_sum-position_row)#for filter large variant
                     log_file.write('Warning interval contain large indel, interval ignored ' + str([position_row,position_row2])+' Indel lenght = ' + str(window_sum-position_row) +'\n')
                     break
 
-                vcf_slice = vcf[(position_row <= vcf['POS']) & (vcf['POS'] <= position_row2) & (vcf['#CHROM']==contig)]#!window_sum
+                #vcf_slice = vcf[(position_row <= vcf['POS']) & (vcf['POS'] <= position_row2) & (vcf['#CHROM']==contig)]#!window_sum
                 #if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
                     #print('Warning interval contain indeterminate variant,interval ignored',[position_row,position_row2])
                     #log_file.write('Warning interval contain indeterminate variant,interval ignored ' + str([position_row,position_row2])+'\n')
@@ -433,7 +435,8 @@ def vcf_corrector_bed(vcf,intervals_alignment):
             else:
                 sum_NA+=1
         else:
-            pass
+            print('Error sample not in vcf')
+            
     return vcf
 
 
