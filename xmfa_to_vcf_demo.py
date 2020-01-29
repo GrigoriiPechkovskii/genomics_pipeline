@@ -54,10 +54,13 @@ if False:
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
     directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
 
+    #directory_file_xmfa = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_cholerae2_test/exp_cholerae2_group_0/exp_cholerae2_group_0'
+
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
     #REF ='AmesAncestor_GCF_0000084451'
     REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    #REF = 'V_cholerae_N16961'
     #REF = 'Ames_Ancestor_ref_GCF_000008445.1_ASM844v1_genomic.fna'#parsnp.xmfa
     directory_out = directory
 
@@ -66,7 +69,9 @@ if False:
     #name_vcf_simple = 'test_sim.vcf'
 
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    name_vcf = 'test_exp_1_group_1.vcf'
+    file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline' + '/GCF_000006745.1_ASM674v1_genomic.gbk'
+
+    name_vcf = 'test_exp_clor.vcf'
 
 #some important options
 sort = True
@@ -670,6 +675,35 @@ def seq_reverse(seq_seq):
                 seq_rev += 'T'
             elif sym=='-':
                 seq_rev += '-'
+
+            elif sym=='W':
+                seq_rev += 'W'
+            elif sym=='S':
+                seq_rev += 'S'
+            elif sym=='M':
+                seq_rev += 'K'
+            elif sym=='K':
+                seq_rev += 'M'
+            elif sym=='R':
+                seq_rev += 'Y'
+            elif sym=='Y':
+                seq_rev += 'R'
+            elif sym=='B':
+                seq_rev += 'V'
+            elif sym=='D':
+                seq_rev += 'H'
+            elif sym=='H':
+                seq_rev += 'D'
+            elif sym=='V':
+                seq_rev += 'B'
+            elif sym=='N':
+                seq_rev += 'N'
+            elif sym=='Z':
+                seq_rev += 'Z'
+            else:
+                print('Error with nuc sym')
+
+
         seq_rev = seq_rev[::-1]
         seq_seq_rev += [seq_rev]
     return seq_seq_rev
@@ -701,8 +735,8 @@ def variance_calling():
 
 
         
-        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:#!0 -> 1
-            print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
+        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:#!0 -> 1 or false!!!!!!!
+            print('WARNING pass aln',pos_set[1][0],pos_set[0][0][0],pos_set[0][0][1],int(pos_set[0][0][1]) - int(pos_set[0][0][0]))
             #print('WARNING not contain reference',len(seq_seq[0]),len(seq_seq))
             #print(title_seq)
             continue        
@@ -710,6 +744,7 @@ def variance_calling():
         else:
 
             #for bed format
+
             #bed = open(directory_out + '/' +'test'+'.bed','a')
             #bed_df = pd.DataFrame(columns=['#contig','start_positioin','end_position','name'])            
             #bed.write('\t'.join(['#contig','start_positioin','end_position','name'])+'\n')
@@ -720,22 +755,23 @@ def variance_calling():
 
             position_real_f = pos_set[0][0][0]
             position_real_s = pos_set[0][0][1]
-
+            
             for num,name in enumerate(pos_set[1]):
-                bed_str = [contig] + [str(position_real_f)] + [str(position_real_s)] + [name]
+                if name != REF:
+                    bed_str = [contig] + [str(position_real_f)] + [str(position_real_s)] + [name]
 
-                bed_dic['#contig'] = contig
-                bed_dic['start_position_ref'] = str(position_real_f)
-                bed_dic['end_position_ref'] = str(position_real_s)
+                    bed_dic['#contig'] = contig
+                    bed_dic['start_position_ref'] = str(position_real_f)
+                    bed_dic['end_position_ref'] = str(position_real_s)
 
-                bed_dic['name'] = name
-                bed_dic['start_position_alt'] = pos_set[0][num][0]
-                bed_dic['end_position_alt'] = pos_set[0][num][1]
+                    bed_dic['name'] = name
+                    bed_dic['start_position_alt'] = pos_set[0][num][0]
+                    bed_dic['end_position_alt'] = pos_set[0][num][1]
 
 
-                bed_df = bed_df.append(bed_dic,ignore_index=True)
-                #bed.write('\t'.join(bed_str)+'\n')
-            #bed.close()           
+                    bed_df = bed_df.append(bed_dic,ignore_index=True)
+                    #bed.write('\t'.join(bed_str)+'\n')
+                #bed.close()           
 
             if pos_set[2][0] == '-':
                 #print('before===',seq_seq)
@@ -796,8 +832,8 @@ if sort:
             if '##' in line:
                n_comment += 1
     df_vcf = pd.read_csv(directory_out +'/'+name_vcf,sep='\t',header=n_comment)
-    #df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[False,True])
-    df_vcf = df_vcf.sort_values(by=['POS','#CHROM'],ascending=[True,False])
+    df_vcf = df_vcf.sort_values(by=['#CHROM','POS'],ascending=[True,True])
+    #df_vcf = df_vcf.sort_values(by=['POS','#CHROM'],ascending=[True,False])
 
     if delete_ref:
         del df_vcf[REF]
