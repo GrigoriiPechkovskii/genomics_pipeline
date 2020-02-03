@@ -43,6 +43,7 @@ pd.set_option('display.max_columns', 10)
 
 local = False
 test = True
+info_just_indel = False
 
 if not(local or test):
     intervals_path = parser.parse_args().interval.split(',')
@@ -151,16 +152,17 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
 
         #sample_bin_dict = {i:None for i in vcf_slice.iloc[:,9:]}#!!!maybe need
         sample_bin_dict = dict()
-        
+
         position_first = int(vcf_slice.iloc[0]['POS'])
         position_start = int(vcf_slice.iloc[0]['POS'])
         max_over = max([len(ref) + pos - 1 for ref,pos in zip(vcf_slice['REF'],vcf_slice['POS'])])
 
         sample_dict = {i:list(sequence[position_first-1:max_over]) for i in vcf_slice.iloc[:,9:]}
+        sample_dict_info = {i:'' for i in vcf_slice.iloc[:,9:]}
+
         sample_dict_mem = {i:position_first for i in vcf_slice.iloc[:,9:]}
 
         ref_mod = sequence[position_first-1:max_over]
-        print(ref_mod)
         sample_will_deleted = set()
         
         #check for if overlay out interval
@@ -252,10 +254,13 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
 
                         if len(variant[int(vcf_slice.loc[row_index][sample])]) == ref_len:#!
                             sample_dict[sample][position_row_shift:position_row_shift+ref_len] =  ([list(variant[int(vcf_slice.loc[row_index][sample])])])[:alt_cut]
+                            #sample_dict_info[sample] = sample_dict_info[sample]+vcf_slice.loc[row_index]['INFO'] + '_'
 
                         elif len(variant[int(vcf_slice.loc[row_index][sample])]) != ref_len:
                             sample_dict[sample][position_row_shift:position_row_shift+ref_len] = ([list(variant[int(vcf_slice.loc[row_index][sample])])])[:alt_cut] + [''] * (ref_len - 1) #(len(sample_dict[sample][position_row_shift:position_row_shift+ref_len]) - 1)
-                            
+                        
+                        sample_dict_info[sample] = sample_dict_info[sample]+vcf_slice.loc[row_index]['INFO'] + '+'
+
                         sample_dict_mem[sample] += len(vcf_slice.loc[row_index]['REF'])
                            
                     else:
@@ -283,27 +288,29 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
         sample_dict = {i:''.join(j) for i,j in sample_dict.items()}
         
 
-
-        print(sample_dict)
+        sample_dict_info = {i:j[:-1] for i,j in sample_dict_info.items()}
         ref_mod
         #sample_bin_dict = dict()
         sample_seq_set = set()
         sample_uniq_dict = dict()
-        
+        info_lst = []
         sample_uniq_dict[ref_mod] = 0
+        sample_seq_set.add(ref_mod)
+
         bin_value = 1
-        for sample_seq_uniq in sample_dict.values():
+        for sample,sample_seq_uniq in sample_dict.items():
             if sample_seq_uniq not in sample_seq_set:
                 sample_seq_set.add(sample_seq_uniq)
                 sample_lst.append(sample_seq_uniq)
+
+                info_lst.append(sample_dict_info[sample])
+
                 sample_uniq_dict[sample_seq_uniq] = bin_value
                 bin_value+=1
+
         for sample in sample_dict:
             sample_bin_dict[sample] = sample_uniq_dict[sample_dict[sample]]
-
-        print(sample_bin_dict)
-        #sample_lst = sample_dict.values()
-
+        info = '&'.join(info_lst)
 
         '''
         for sample in sample_dict:
@@ -325,9 +332,13 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
         '''
 
         alt = ','.join(sample_lst)
-        info = 'INDEL'
-        print('Add compressed interval to vcf',pos_start,pos_end)
-        log_file.write('Add compressed interval to vcf ' + str([pos_start,pos_end])+'\n')
+
+        #print(vcf_slice['INFO'].values)
+        
+        if info_just_indel:
+            info = 'INDEL'
+        print('Add compressed interval to vcf',pos_start,pos_end,str(pos_end-pos_start))
+        log_file.write('Add compressed interval to vcf ' + str([pos_start,pos_end])+ str(pos_end-pos_start) + '\n')
 
         vcf_variant_dict = {'#CHROM':contig,'POS':position_first,'ID':'.','REF':ref_mod,
                     'ALT':alt,'QUAL':40,'FILTER':'PASS','INFO':info,'FORMAT':'GT'}
@@ -341,7 +352,7 @@ def merge_window(intervals,vcf,ref_sequence=sequence,fullcheck=True,ignored=True
 
     return vcf
 
-def definer_overlap_window(vcf,overlap_extra=0):
+def definer_overlap_window(vcf,overlap_extra=0,type_merge='hard'):
     over = 0
     interval_noexact = []
     interval_exact = []
@@ -354,7 +365,7 @@ def definer_overlap_window(vcf,overlap_extra=0):
         interval_dict = {}
         interval2 = []
         window_sum = vcf.loc[position_row]['POS'] + len(vcf.loc[position_row]['REF'])-1 + overlap_extra
-        print(position_row,window_sum)
+        #print(position_row,window_sum)
         for position_row2 in vcf.index[num+1:]:
             if vcf.loc[position_row2]['POS'] <= window_sum:
                 over = vcf.loc[position_row2]['POS']+len(vcf.loc[position_row2]['REF'])-1 + overlap_extra
@@ -363,15 +374,18 @@ def definer_overlap_window(vcf,overlap_extra=0):
                     window_sum = over 
 
                 if window_sum - vcf.loc[position_row]['POS']>1000:
-                    print('Warning interval contain large indel','interval ignored',[position_row,position_row2],'Indel lenght =',window_sum-position_row)#for filter large variant
-                    log_file.write('Warning interval contain large indel, interval ignored ' + str([position_row,position_row2])+' Indel lenght = ' + str(window_sum-position_row) +'\n')
+                    print('Warning interval contain large indel','interval ignored',[position_row,position_row2],'Indel lenght =',window_sum-vcf.loc[position_row]['POS'])#for filter large variant
+                    log_file.write('Warning interval contain large indel, interval ignored ' + str([position_row,position_row2])+' Indel lenght = ' + str(window_sum-vcf.loc[position_row]['POS']) +'\n')
                     break
 
-                #vcf_slice = vcf[(position_row <= vcf['POS']) & (vcf['POS'] <= position_row2) & (vcf['#CHROM']==contig)]#!window_sum
-                #if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
-                    #print('Warning interval contain indeterminate variant,interval ignored',[position_row,position_row2])
-                    #log_file.write('Warning interval contain indeterminate variant,interval ignored ' + str([position_row,position_row2])+'\n')
-                    #break
+                if type_merge == 'soft':
+                    vcf_slice = vcf[(vcf.loc[position_row]['POS'] <= vcf['POS']) & (vcf['POS'] <= vcf.loc[position_row2]['POS']) & (vcf['#CHROM']==contig)]#!window_sum
+                    #print(vcf_slice)
+                    if any((vcf_slice.iloc[:,9:].isin(['.']).any()) & (~(vcf_slice.iloc[:,9:].isin(['.']).all()))):
+                        print('Warning interval contain indeterminate variant,interval ignored',[position_row,position_row2])
+                        log_file.write('Warning interval contain indeterminate variant,interval ignored ' + str([position_row,position_row2])+'\n')
+                        break
+
                 interval = [vcf.loc[position_row]['POS'],window_sum]
                 interval2 = [vcf.loc[position_row]['POS'],vcf.loc[position_row2]['POS']]
 

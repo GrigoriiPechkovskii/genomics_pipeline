@@ -29,12 +29,13 @@ out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
 
 work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
 REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A10_test'
-out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/' # / impotant
+name_exp = 'exp_A12_test'
+out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/' + name_exp + '/' # / impotant
 file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
 
 #header = 15
 BED = True
+pipeline_version = 'pipeline version 0.05\n'
 
 def contig_finder_gbk(file_gbk_dir):
     ''' '''
@@ -78,6 +79,7 @@ logfile_mauve = open(logfile_mauve_path,'a')
 
 logfile_path = out_dir+'log_file.txt'
 logfile = open(logfile_path,'a')
+logfile.write(pipeline_version)
 
 files = os.listdir(work_dir)
 files_genome = [work_dir + file for file in files if file.endswith(('.fa','.fasta','.fna'))]
@@ -272,7 +274,7 @@ for n_intervals in  range(len(intervals_path)):
 
 #del intervals_path[]
 #!!!!for 1 do not work
-merged_vcf_path = vcf_out + 'merged.vcf'
+merged_vcf_path = vcf_out + 'merged_' + name_exp + '.vcf'
 with open(merged_vcf_path,'a') as file_merged:
     #bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
     bcftools_run = subprocess.Popen([bcftools,'merge','--merge','none','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
@@ -293,7 +295,7 @@ vcf_opened.close()
 
 
 print('START vcf_merger')
-merged_final = vcf_out +  'merged_final.vcf'
+merged_final = vcf_out +  'merged_final_'  + name_exp + '.vcf'
 vcf_merger_run = subprocess.Popen([vcf_merger,
         "-v",  merged_vcf_path,
         "-r", REF,        
