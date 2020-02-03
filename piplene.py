@@ -27,10 +27,10 @@ out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
 #file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/GCF_000006745.1_ASM674v1_genomic.gbk'
 
 
-work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/'
-REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A7_test'
-out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A7_test/' # / impotant
+work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
+REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
+name_exp = 'exp_A10_test'
+out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/' # / impotant
 file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
 
 #header = 15
@@ -274,7 +274,9 @@ for n_intervals in  range(len(intervals_path)):
 #!!!!for 1 do not work
 merged_vcf_path = vcf_out + 'merged.vcf'
 with open(merged_vcf_path,'a') as file_merged:
-    bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
+    #bcftools_run = subprocess.Popen([bcftools,'merge','--merge','all','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
+    bcftools_run = subprocess.Popen([bcftools,'merge','--merge','none','--force-samples',*vcf_path_lst_gz],universal_newlines=True,stdout=file_merged,stderr=logfile)#,stderr=logfile)
+
     bcftools_run.wait()
 
 
