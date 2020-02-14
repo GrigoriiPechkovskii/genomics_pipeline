@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+#for test mini
+test_mini.vcf
+
+>>>>>>> xmfa_to_vcf/master
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
