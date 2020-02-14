@@ -42,7 +42,7 @@ pd.set_option('display.max_columns', 10)
 
 
 local = False
-test = True
+test = False
 info_just_indel = False
 
 if not(local or test):
@@ -53,12 +53,13 @@ if not(local or test):
 if local:
     directory = os.getcwd()
     file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/merged.vcf'
-    
     file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/vcf_out/vcf_correct_bed10_edit.vcf'
+    file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/merged_final_exp_A12_test.vcf'
+    
     file_fasta = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/GCF_000008445.1_ASM844v1_genomic.fna'
     file_gbk = directory + '/test/' + 'AmesAncestor_GCF_000008445.1.gbk'
-    work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/vcf_out'
-    out_file = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/vcf_out/vcf_merged_777.vcf'
+    work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/'
+    out_file = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/vcf_merged_777.vcf'
     log_file_path = work_dir + '/' + 'log_test4444.txt'
     #header = 15
     header = 0
@@ -501,7 +502,7 @@ def vcf_corrector_bed(vcf,intervals_alignment):
     for index,bedline in intervals_alignment.iterrows():
         if bedline['name'] in vcf.columns:
             if (bedline['start_position_ref']!=0 or bedline['end_position_ref']!=0) and (bedline['start_position_alt']!=0 or bedline['end_position_alt']!=0):
-                vcf.loc[(vcf['POS']>=bedline['start_position_ref']) & (vcf['POS']<=bedline['end_position_ref']) & (vcf[bedline['name']]=='.'),bedline['name']] = 0
+                vcf.loc[(vcf['POS']>=bedline['start_position_ref']) & (vcf['POS']<=bedline['end_position_ref']) & (vcf[bedline['name']]=='.'),bedline['name']] = 0#bug with right unknown pos
                 sum_0+=1
             else:
                 sum_NA+=1
@@ -596,7 +597,7 @@ log_file = open(log_file_path,'a')
 log_file.write('\n'+'Start merge_window'+'\n\n')
 print('\n'+'Start merge_window'+'\n\n')
 vcf_merged = merge_window(interval_exact,vcf_correct_bed.copy(),fullcheck=False)
-#vcf_merged = merge_window([['NC_007530',1182932, 1183069]],vcf.copy(),fullcheck=False)
+#vcf_merged = merge_window([['NC_007530',104119, 104120]],vcf.copy(),fullcheck=False)
 
 find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
 vcf_merged = position_editer(vcf_merged.copy())

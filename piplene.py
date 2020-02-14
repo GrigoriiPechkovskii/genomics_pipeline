@@ -29,7 +29,7 @@ out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
 
 work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
 REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A12_test'
+name_exp = 'exp_A13_test'
 out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/' + name_exp + '/' # / impotant
 file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
 
