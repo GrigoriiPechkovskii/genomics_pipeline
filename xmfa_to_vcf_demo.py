@@ -52,11 +52,11 @@ if True:
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
     #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/exp_1_group_1'
 
-    #directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
+    directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
     #REF ='AmesAncestor_GCF_0000084451'
-    #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
     directory_out = directory
 
     index_type = 'mauve'
@@ -132,9 +132,11 @@ def head_vcf(name_seq:list):
     tag += '##INFO=<ID=SNR,Number=0,Type=Flag,Description="Indicates that the variant is an SNR.">' + '\n'
     tag += '##INFO=<ID=REPEAT,Number=0,Type=Flag,Description="Indicates that the variant is an REPEAT.">' + '\n' 
     tag += '##INFO=<ID=ComplexIndel,Number=0,Type=Flag,Description="Indicates that the variant is an ComplexIndel.">' + '\n' 
-    tag += '##INFO=<ID=NANinfo,Number=0,Type=Flag,Description="Indicates that the variant is an NANinfo.">' + '\n' 
-    tag += '##INFO=<ID=substitution,Number=0,Type=Flag,Description="Indicates that the variant is an substitution.">' + '\n' 
+    tag += '##INFO=<ID=NaNIndel,Number=0,Type=Flag,Description="Indicates that the variant is an NaNIndel.">' + '\n' 
+    tag += '##INFO=<ID=Substitution,Number=0,Type=Flag,Description="Indicates that the variant is an substitution.">' + '\n' 
     tag += '##INFO=<ID=maybe_inversion,Number=0,Type=Flag,Description="Indicates that the variant is an maybe_inversion.">' + '\n'   
+    tag += '##INFO=<ID=OriginalIndel,Number=0,Type=Flag,Description="Indicates that the variant is an OriginalIndel.">' + '\n'   
+
     head = '\t'.join(columns_name) + '\n'
     with open(directory_out +'/'+ name_vcf,'w') as file_vcf:
         file_vcf.write(tag)
@@ -392,7 +394,7 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
     #start_pos - ref position last equal symbol + pos vcf
     #rep_pos - sym_num position first non equal symbol
     sym_seq_start = 'YYY'
-    info = 'NANinfo'
+    info = 'NaNIndel'
     #sym_seq_end = ''
     sym_num_start = 0
     sym_seq_lst = list()
@@ -430,6 +432,7 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
                     #start_pos = ref_pos    
                     if len(sym_seq_lst) == sym_num:
                         start_pos = ref_pos + pos_vcf - 2
+                        info = 'OriginalIndel'
                         print('Warning origin seq start with indel 1',start_pos)
                     #if any([seq_seq[i][0:sym_num] == '-'*sym_num for i in range(len(seq_seq))]):#S.startswith(str)
                         if len(sym_seq_lst)==1 and all(['-' not in s for s in sym_seq_lst]):#ex for first snp
@@ -453,7 +456,7 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
             start_pos,sym_seq_lst,info = repeat_diffinder(rep_pos,start_pos,sym_seq_lst,info,ref_pos,ref_seq)
             yield start_pos,sym_seq_lst,info
 
-            info = 'NANinfo'
+            info = 'NaNIndel'
 
             sym_seq_lst = []
             start_pos = ref_pos + pos_vcf - 1
@@ -467,9 +470,9 @@ def diffinder(seq_seq,ref_pos,ref_seq,pos_vcf=pos_vcf,pos_minus=pos_minus):
             rep_pos = sym_num
 
         
-def dif_process(seq_lst,position,info='NANinfo'):
+def dif_process(seq_lst,position,info='NaNIndel'):
     variance_bin_dict = dict()
-    #info = 'NANinfo'
+    #info = 'NaNIndel'
     name_str_dict = {x: "." for x in id_nameseq_dict_val}#NAN
     variance_lst = join_dif(list((zip(*seq_lst))))
     variance_set = set((zip(*seq_lst)))
@@ -549,7 +552,7 @@ def dif_process(seq_lst,position,info='NANinfo'):
         if len(seq_lst)==2:
             info = 'SNP'
         else:
-            info = 'substitution'
+            info = 'Substitution'
 
         return name_str_dict,list(alt_variance_dict_n),position,info
     
@@ -568,7 +571,7 @@ def dif_process(seq_lst,position,info='NANinfo'):
 
         if len(set(alt_variance_dict_r.values())) != len(list(alt_variance_dict_r.values())):           
 
-            info = 'maybe_inversion'
+            info = 'Maybe_inversion'
             #print('WARNING maybe wrong alignment')
 
             return name_str_dict,list(alt_variance_dict_r.values()),position,info

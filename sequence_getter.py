@@ -36,9 +36,9 @@ if not os.access(directory_out,os.F_OK):
 
 if True:
     directory = os.getcwd()
-    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
+    #directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 
-    directory_file_xmfa = directory + '/' + 'test_mini.xmfa'
+    #directory_file_xmfa = directory + '/' + 'test_mini.xmfa'
     directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
@@ -50,6 +50,10 @@ if True:
     #name_vcf_simple = 'test_sim.vcf'
     file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
     name_vcf = 'test_exp_1_group_1.vcf'
+
+    directory_exp_main = '/home/strain4/Desktop/fin_script/exp_super2_4/'
+    directory_exp_files = [directory_exp_main + file_name +'/' + file_name for file_name in os.listdir(directory_exp_main) if 'group' in file_name]
+
 
 #some important options
 sort = True
@@ -102,8 +106,8 @@ def get_index(directory_file_xmfa,index_type):
     file_xmfa.close()
     return id_nameseq_dict
 
-id_nameseq_dict = get_index(directory_file_xmfa,index_type)
-id_nameseq_dict_val = list(id_nameseq_dict.values())
+#id_nameseq_dict = get_index(directory_file_xmfa,index_type)
+#id_nameseq_dict_val = list(id_nameseq_dict.values())
 
 def single_aln_generator(directory_file_xmfa):
     '''Generator for xmfa,
@@ -138,12 +142,16 @@ def single_aln_generator(directory_file_xmfa):
     file_xmfa.close()
 
 
-def parser_title(title_seq:list):
+def parser_title(title_seq:list,directory_file_xmfa):
     '''Parsing > line
        get title_seq(> line)
        return positioin start - end sequence
        and name_idseq - name sequece from header name and id in > line
     '''
+
+    id_nameseq_dict = get_index(directory_file_xmfa,index_type)
+    id_nameseq_dict_val = list(id_nameseq_dict.values())
+
     position_every = []
     position_every_dict = dict()
     position_every_num_dict = dict()
@@ -236,13 +244,18 @@ def seq_reverse(seq_seq):
         seq_seq_rev += [seq_rev]
     return seq_seq_rev
 
-def aln_getter(query_pos,start_inter=100,end_inter=100): 
+def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,without_ref=False): 
     contig,position_real = contig_definder(query_pos,find_locus,find_source)
     position_real = query_pos
+
+    query_pos_init = query_pos
+    start_inter_init = start_inter
+    end_inter_init = end_inter
+
     for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
         #print(title_seq)
 
-        pos_set = parser_title(title_seq)
+        pos_set = parser_title(title_seq,directory_file_xmfa)
 
         if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:
             print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
@@ -253,6 +266,14 @@ def aln_getter(query_pos,start_inter=100,end_inter=100):
                 pos = position_real - int(pos_set[0][0][0])
                 pos_gapless = 0
                 pos_full = 0
+
+                if pos_set[2][0] == '-':
+                    seq_seq = seq_reverse(seq_seq)
+                    #pos_set = list(pos_set)
+                    #pos_set[0] = [ i[::-1] for i in pos_set[0]]
+                    #pos_set = tuple(pos_set)
+                    print('Warning reverse strand')
+
                 for i in seq_seq[0]:#range(len(seq_seq[0])):
                     if i != '-':
                         pos_gapless += 1
@@ -269,15 +290,19 @@ def aln_getter(query_pos,start_inter=100,end_inter=100):
                 fast_opened = open(contig + '_' +str(position_real) + '_variance' + '.fna','a')
 
                 for n_seq in range(len(seq_seq)):
-                    head = ' '.join(['>' + pos_set[1][n_seq],str(position_real),'start_inter=' + str(start_inter),'end_inter=' + str(end_inter),title_seq[n_seq].replace('>','').replace(' ','_'),'\n'])
-                    #head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),'\n'])
+                    if without_ref and n_seq==0:
+                        continue
+                    else:
+                        head = ' '.join(['>' + pos_set[1][n_seq],str(position_real),str(query_pos_init),str(start_inter_init),str(end_inter_init),'start_inter=' + str(start_inter),'end_inter=' + str(end_inter),title_seq[n_seq].replace('>','').replace(' ','_'),'\n'])
+                        #head = ' '.join(['>',str(position_real),'start_inter=',str(start_inter),'end_inter',str(end_inter),'\n'])
 
-                    fast_opened.write(head)
-                    fast_opened.write(seq_seq[n_seq][start_inter:end_inter] + '\n')
-                    #print('position_real=',position_real,'query_pos=',query_pos,
-                    #    'start_inter=',start_inter,'end_inter=',end_inter,'len(seq_seq[0])-1',len(seq_seq[0])-1,
-                    #    pos_set[1][n_seq])
+                        fast_opened.write(head)
+                        fast_opened.write(seq_seq[n_seq][start_inter:end_inter] + '\n')
+                        #print('position_real=',position_real,'query_pos=',query_pos,
+                        #    'start_inter=',start_inter,'end_inter=',end_inter,'len(seq_seq[0])-1',len(seq_seq[0])-1,
+                        #    pos_set[1][n_seq])
                 fast_opened.close()
+                return
 
 class SequenceFasta():
     '''Processes a fasta file'''
@@ -366,6 +391,7 @@ def fasta_getter(fasta_path,start=0,end=1):
             print(line)
         pass
 
-#aln_getter(164380,start_inter=300,end_inter=300)
+for directory_exp_file in directory_exp_files:    
+    aln_getter(3155636,directory_exp_file,start_inter=500,end_inter=1000,without_ref=True)
 
 print('end')
