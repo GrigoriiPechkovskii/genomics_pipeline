@@ -44,28 +44,20 @@ if not os.access(directory_out,os.F_OK):
 
 if True:
     directory = os.getcwd()
-    directory_file_xmfa = '/home/strain4/Desktop/xmfa_to_vcf/test_mini.xmfa'
 
-    directory_file_xmfa = directory + '/' + 'test_mini.xmfa'
-    #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAJ/GI_AAJ_out1/out1'
-    #directory_file_xmfa = '/home/strain4/Desktop/content/GI_AAF/choise3_out2/parsnp.xmfa'
-    #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/group0'
-    #directory_file_xmfa = '/home/strain4/Desktop/piplene_mauve/exp1/exp_0/exp_1_group_1'
-
-    directory_file_xmfa = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/exp_A2_group_0'
+    directory_file_xmfa = directory + '/test/' + 'test_mini.xmfa'
 
     REF = 'AmesAncestor_GCF_000008445.1'#test_mini
     #REF ='AmesAncestor_GCF_0000084451'
-    REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
-    directory_out = directory
+    #REF = 'GCF_000008445.1_ASM844v1_genomic'#GI_AAJ_out1
+    directory_out =  directory + '/test' 
 
     index_type = 'mauve'
     #name_vcf_simple = 'test_sim.vcf'
 
-    file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
-    #file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline' + '/GCF_000006745.1_ASM674v1_genomic.gbk'
+    file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
 
-    name_vcf = 'test_exp_test.vcf'
+    name_vcf = 'test_exp_xmfa_to_vcf.vcf'
 
 #some important options
 sort = True

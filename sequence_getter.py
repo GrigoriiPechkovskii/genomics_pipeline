@@ -48,7 +48,7 @@ if True:
     directory_out = directory
     index_type = 'mauve'
     #name_vcf_simple = 'test_sim.vcf'
-    file_gbk = directory + '/AmesAncestor_GCF_000008445.1.gbk'
+    file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
     name_vcf = 'test_exp_1_group_1.vcf'
 
     directory_exp_main = '/home/strain4/Desktop/fin_script/exp_super2_4/'

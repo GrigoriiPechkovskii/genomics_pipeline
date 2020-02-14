@@ -42,7 +42,7 @@ pd.set_option('display.max_columns', 10)
 
 
 local = False
-test = False
+test = True
 info_just_indel = False
 
 if not(local or test):
@@ -79,7 +79,7 @@ if local:
 if test:
     directory = os.getcwd()
     file_fasta = directory + '/test/' +'test_merger.fna'
-    file_gbk = directory + '/test/' + 'AmesAncestor_GCF_000008445.1.gbk'
+    file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
     file_vcf = directory + '/test/' + 'test_merger_alignment_checker.vcf'
     work_dir = directory + '/test'
     log_file_path = directory + '/test/' + 'log.txt'

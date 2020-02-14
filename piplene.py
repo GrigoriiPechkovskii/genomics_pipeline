@@ -8,30 +8,17 @@ import pandas as pd
 
 #config
 mauve = '/home/strain4/Desktop/content/bioinf_prog/mauve_snapshot_2015-02-13/linux-x64/progressiveMauve'
-xmfa_to_vcf = '/home/strain4/Desktop/fin_script/xmfa_to_vcf/xmfa_to_vcf_demo.py'
+xmfa_to_vcf = '/xmfa_to_vcf_demo.py'
 bcftools = '/home/strain4/Desktop/content/bioinf_prog/bcftools/bcftools'
 bgzip = 'bgzip'
-vcf_merger = '/home/strain4/Desktop/fin_script/genomics_pipline/vcf_merger.py'
-
-'''
-work_dir = '/home/strain4/Desktop/piplene_mauve/work_dir/'
-REF = '/home/strain4/Desktop/piplene_mauve/work_dir/x.fna'
-name_exp = 'test'
-out_dir = "/home/strain4/Desktop/piplene_mauve/out_test4/"
-'''
-
-#work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
-#REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/V_cholerae_N16961.fna'
-#name_exp = 'exp_cholerae6'
-#out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_cholerae6_test/' # / impotant
-#file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/GCF_000006745.1_ASM674v1_genomic.gbk'
+vcf_merger = '/vcf_merger.py'
 
 
 work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
 REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
 name_exp = 'exp_A13_test'
 out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/' + name_exp + '/' # / impotant
-file_gbk = '/home/strain4/Desktop/fin_script/test_genomics_pipline/AmesAncestor_GCF_000008445.1.gbk'
+file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
 
 #header = 15
 BED = True
