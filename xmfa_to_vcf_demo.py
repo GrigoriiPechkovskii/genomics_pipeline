@@ -22,6 +22,9 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pipeline_base
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-x', '--xmfa',action='store', help='File xmfa')
 parser.add_argument('-r', '--ref',action='store', help='Reference fasta')
@@ -42,7 +45,7 @@ name_vcf = parser.parse_args().name_vcf
 if not os.access(directory_out,os.F_OK):
     os.mkdir(directory_out)
 
-if True:
+if False:
     directory = os.getcwd()
 
     directory_file_xmfa = directory + '/test/' + 'test_mini.xmfa'
@@ -572,78 +575,10 @@ def dif_process(seq_lst,position,info='NaNIndel'):
     return name_str_dict,list(alt_variance_dict),position,info#!maybe not
 
 
-def contig_finder_gbk(file_gbk_dir):
-    ''' '''
-    with open(file_gbk) as file_gbk_opened:
-        file_gbk_read = file_gbk_opened.read()
-        find_locus = re.findall(r'LOCUS\s+(.*?)\s\s+',file_gbk_read)
-        find_source = re.findall(r'\s\s+source\s+(.*?)\s\s+',file_gbk_read)
 
-    find_source = [[*map(int,(i.split('..')))] for i in find_source]
-    find_source_real = find_source.copy()
-    for source_num in range(1,len(find_source)):
-        find_source[source_num] = [find_source[source_num][0] + find_source[source_num-1][1],
-                                   find_source[source_num][1] + find_source[source_num-1][1]]
-    return find_locus, find_source,find_source_real
-
-find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
-
-def contig_definder(position,find_locus,find_source): 
-    ''' ''' 
-    for locus,source in zip(find_locus,find_source):
-        if (source[0] <= position <= source[1]):
-            position_real = position - source[0]+ 1#!
-            return locus,position_real
-
-def seq_reverse(seq_seq):
-
-    #seq_rev = ''
-    seq_seq_rev = []
-    for seq in seq_seq:
-        seq_rev = ''
-        for sym in seq:
-            if sym=='C':
-                seq_rev += 'G'
-            elif sym=='G':
-                seq_rev += 'C'
-            elif sym=='T':
-                seq_rev+='A'
-            elif sym=='A':
-                seq_rev += 'T'
-            elif sym=='-':
-                seq_rev += '-'
-
-            elif sym=='W':
-                seq_rev += 'W'
-            elif sym=='S':
-                seq_rev += 'S'
-            elif sym=='M':
-                seq_rev += 'K'
-            elif sym=='K':
-                seq_rev += 'M'
-            elif sym=='R':
-                seq_rev += 'Y'
-            elif sym=='Y':
-                seq_rev += 'R'
-            elif sym=='B':
-                seq_rev += 'V'
-            elif sym=='D':
-                seq_rev += 'H'
-            elif sym=='H':
-                seq_rev += 'D'
-            elif sym=='V':
-                seq_rev += 'B'
-            elif sym=='N':
-                seq_rev += 'N'
-            elif sym=='Z':
-                seq_rev += 'Z'
-            else:
-                print('Error with nuc sym')
+find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)
 
 
-        seq_rev = seq_rev[::-1]
-        seq_seq_rev += [seq_rev]
-    return seq_seq_rev
 
 
 col_interval = []
@@ -685,8 +620,8 @@ def variance_calling():
             #bed.write('\t'.join(['#contig','start_positioin','end_position','name'])+'\n')
             bed_dic = {}
             #print(int(pos_set[0][0][1]),find_locus,find_source)
-            contig,position_real_f = contig_definder(int(pos_set[0][0][0]),find_locus,find_source)
-            contig,position_real_s = contig_definder(int(pos_set[0][0][1]),find_locus,find_source)
+            contig,position_real_f = pipeline_base.contig_definder(int(pos_set[0][0][0]),find_locus,find_source)
+            contig,position_real_s = pipeline_base.contig_definder(int(pos_set[0][0][1]),find_locus,find_source)
 
             position_real_f = pos_set[0][0][0]
             position_real_s = pos_set[0][0][1]
@@ -709,7 +644,7 @@ def variance_calling():
                 #bed.close()           
 
             if pos_set[2][0] == '-':
-                seq_seq = seq_reverse(seq_seq)
+                seq_seq = pipeline_base.seq_reverse(seq_seq)
                 #pos_set = list(pos_set)
                 #pos_set[0] = [ i[::-1] for i in pos_set[0]]
                 #pos_set = tuple(pos_set)
@@ -730,7 +665,7 @@ def variance_calling():
                     #print(position,int(pos_set[0][0][0])- (int(position)-int(pos_set[0][0][0])))
                     #position = int(pos_set[0][0][0])- (int(position)-int(pos_set[0][0][0]))
 
-                contig,position_real = contig_definder(position,find_locus,find_source)
+                contig,position_real = pipeline_base.contig_definder(position,find_locus,find_source)
                 #contig = pos_set[1][0]
 
                 #with open('alt_variance_dict2.txt','a') as alt_variance_dict_file:
@@ -777,7 +712,7 @@ if sort:
 print('end')
 #directory_file_xmfa = 
 def aln_getter(query_pos,start_inter=100,end_inter=100): 
-    contig,position_real = contig_definder(query_pos,find_locus,find_source)
+    contig,position_real = pipeline_base.contig_definder(query_pos,find_locus,find_source)
     position_real = query_pos
     for title_seq, seq_seq in single_aln_generator(directory_file_xmfa):
         #print(title_seq)

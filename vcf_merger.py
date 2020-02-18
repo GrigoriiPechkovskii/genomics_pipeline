@@ -11,6 +11,8 @@ import timeit
 import numpy as np
 import pandas as pd
 
+import pipeline_base
+
 pd.set_option('display.max_columns', 25)
 
 print('start')
@@ -42,7 +44,7 @@ pd.set_option('display.max_columns', 10)
 
 
 local = False
-test = True
+test = False
 info_just_indel = False
 
 if not(local or test):
@@ -94,40 +96,8 @@ log_file = open(log_file_path,'a')
 vcf = pd.read_csv(file_vcf,sep='\t',header = header)#!15
 vcf.index =vcf['POS'].values
 
-class SequenceFasta():
-    '''Processes a fasta file'''
-    def __init__(self,file_dir):
-        self.file_dir=file_dir
-        self.name_lst = []
-        self.seq_lst = []
-    def just_named(self):
-        '''Works only with sequence names'''
-        with open(self.file_dir) as file_opened:
-            for line in file_opened:
-                if '>' in line:
-                    #print(line)
-                    self.name_lst.append(line)
-    def seq_process(self,strip=False):
-        seq_tmp = ''
-        with open(self.file_dir) as file_opened:            
-            for line in file_opened:
-                if '>' in line:
-                    self.seq_lst.append(seq_tmp)
-                    seq_tmp = ''
-                    if strip:
-                        self.name_lst.append(line.rstrip())
-                    else:
-                        self.name_lst.append(line)  
-                else:
-                    if strip:
-                        seq_tmp += line.rstrip()
-                    else:
-                        seq_tmp += line
-        self.seq_lst.append(seq_tmp)
-        del self.seq_lst[0]
-        self.seq_len = len(self.seq_lst)
 
-fasta = SequenceFasta(file_fasta)
+fasta = pipeline_base.SequenceFasta(file_fasta)
 fasta.seq_process(strip=True)
 sequence = ''.join(fasta.seq_lst)
 
@@ -499,10 +469,12 @@ def vcf_corrector_bed(vcf,intervals_alignment):
     sum_0 = 0
     sum_NA = 0
     assemble_names = list(vcf.columns[9:])
+    pos_end = vcf['POS'] + vcf['REF'].apply(len) - 1
+
     for index,bedline in intervals_alignment.iterrows():
         if bedline['name'] in vcf.columns:
             if (bedline['start_position_ref']!=0 or bedline['end_position_ref']!=0) and (bedline['start_position_alt']!=0 or bedline['end_position_alt']!=0):
-                vcf.loc[(vcf['POS']>=bedline['start_position_ref']) & (vcf['POS']<=bedline['end_position_ref']) & (vcf[bedline['name']]=='.'),bedline['name']] = 0#bug with right unknown pos
+                vcf.loc[(vcf['POS']>=bedline['start_position_ref']) & (vcf['POS']<=bedline['end_position_ref']) & (vcf[bedline['name']]=='.'),bedline['name']] = 0#maybe bug with right unknown pos
                 sum_0+=1
             else:
                 sum_NA+=1
@@ -512,36 +484,6 @@ def vcf_corrector_bed(vcf,intervals_alignment):
     return vcf
 
 
-def contig_finder_gbk(file_gbk_dir):
-    ''' '''
-    with open(file_gbk) as file_gbk_opened:
-        file_gbk_read = file_gbk_opened.read()
-        find_locus = re.findall(r'LOCUS\s+(.*?)\s\s+',file_gbk_read)
-        find_source = re.findall(r'\s\s+source\s+(.*?)\s\s+',file_gbk_read)
-
-    find_source = [[*map(int,(i.split('..')))] for i in find_source]
-    find_source_real = find_source.copy()
-    for source_num in range(1,len(find_source)):
-        find_source[source_num] = [find_source[source_num][0] + find_source[source_num-1][1],
-                                   find_source[source_num][1] + find_source[source_num-1][1]]
-    return find_locus, find_source,find_source_real
-
-def contig_definder(position,find_locus,find_source): 
-    ''' ''' 
-    for locus,source in zip(find_locus,find_source):
-        if (source[0] <= position <= source[1]):
-            position_real = position - source[0]+ 1#!
-            return locus,position_real
-
-def position_editer(vcf):
-    pos_lst = []
-    for position in vcf['POS']:
-        contig,position_real = contig_definder(position,find_locus,find_source)
-        pos_lst.append(position_real)
-        #vcf.loc[position,'POS'] = position_real
-    vcf['POS'] = np.array(pos_lst)
-    vcf.index = vcf['POS']
-    return vcf
 
 vcf_opened = open(file_vcf,'r')
 for line in vcf_opened:
@@ -599,8 +541,8 @@ print('\n'+'Start merge_window'+'\n\n')
 vcf_merged = merge_window(interval_exact,vcf_correct_bed.copy(),fullcheck=False)
 #vcf_merged = merge_window([['NC_007530',104119, 104120]],vcf.copy(),fullcheck=False)
 
-find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
-vcf_merged = position_editer(vcf_merged.copy())
+find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)
+vcf_merged = pipeline_base.position_editer(vcf_merged.copy(),find_locus,find_source)
 
 vcf_merged.to_csv(out_file,sep='\t',index=False)
 

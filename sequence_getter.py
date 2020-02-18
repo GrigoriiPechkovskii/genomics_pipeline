@@ -14,6 +14,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pipeline_base
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-x', '--xmfa',action='store', help='File xmfa')
 parser.add_argument('-r', '--ref',action='store', help='Reference fasta')
@@ -200,52 +202,12 @@ def parser_title(title_seq:list,directory_file_xmfa):
     return pos,name_idseq,strand
 
 
-def contig_finder_gbk(file_gbk_dir):
-    ''' '''
-    with open(file_gbk) as file_gbk_opened:
-        file_gbk_read = file_gbk_opened.read()
-        find_locus = re.findall(r'LOCUS\s+(.*?)\s\s+',file_gbk_read)
-        find_source = re.findall(r'\s\s+source\s+(.*?)\s\s+',file_gbk_read)
 
-    find_source = [[*map(int,(i.split('..')))] for i in find_source]
-    find_source_real = find_source.copy()
-    for source_num in range(1,len(find_source)):
-        find_source[source_num] = [find_source[source_num][0] + find_source[source_num-1][1],
-                                   find_source[source_num][1] + find_source[source_num-1][1]]
-    return find_locus, find_source,find_source_real
+find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)
 
-find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
-
-def contig_definder(position,find_locus,find_source): 
-    ''' ''' 
-    for locus,source in zip(find_locus,find_source):
-        if (source[0] <= position <= source[1]):
-            position_real = position - source[0]+ 1#!
-            return locus,position_real
-
-def seq_reverse(seq_seq):
-
-    #seq_rev = ''
-    seq_seq_rev = []
-    for seq in seq_seq:
-        seq_rev = ''
-        for sym in seq:
-            if sym=='C':
-                seq_rev += 'G'
-            elif sym=='G':
-                seq_rev += 'C'
-            elif sym=='T':
-                seq_rev+='A'
-            elif sym=='A':
-                seq_rev += 'T'
-            elif sym=='-':
-                seq_rev += '-'
-        seq_rev = seq_rev[::-1]
-        seq_seq_rev += [seq_rev]
-    return seq_seq_rev
 
 def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,without_ref=False): 
-    contig,position_real = contig_definder(query_pos,find_locus,find_source)
+    contig,position_real = pipeline_base.contig_definder(query_pos,find_locus,find_source)
     position_real = query_pos
 
     query_pos_init = query_pos
@@ -268,7 +230,7 @@ def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,witho
                 pos_full = 0
 
                 if pos_set[2][0] == '-':
-                    seq_seq = seq_reverse(seq_seq)
+                    seq_seq = pipeline_base.seq_reverse(seq_seq)
                     #pos_set = list(pos_set)
                     #pos_set[0] = [ i[::-1] for i in pos_set[0]]
                     #pos_set = tuple(pos_set)
@@ -304,94 +266,8 @@ def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,witho
                 fast_opened.close()
                 return
 
-class SequenceFasta():
-    '''Processes a fasta file'''
-    def __init__(self,file_dir):
-        self.file_dir=file_dir
-        self.name_lst = []
-        self.seq_lst = []
-    def just_named(self):
-        '''Works only with sequence names'''
-        with open(self.file_dir) as file_opened:
-            for line in file_opened:
-                if '>' in line:
-                    print(line)
-                    self.name_lst.append(line)
-    def seq_process(self,strip=False):
-        seq_tmp = ''
-        with open(self.file_dir) as file_opened:            
-            for line in file_opened:
-                if '>' in line:
-                    self.seq_lst.append(seq_tmp)
-                    seq_tmp = ''
-                    if strip:
-                        self.name_lst.append(line.rstrip())
-                    else:
-                        self.name_lst.append(line)  
-                else:
-                    if strip:
-                        seq_tmp += line.rstrip()
-                    else:
-                        seq_tmp += line
-        self.seq_lst.append(seq_tmp)
-        del self.seq_lst[0]
-        self.seq_len = len(self.seq_lst)
-
-    def fasta_getter(self,start,end,contig='whole'):
-        if contig == 'whole':
-            length_seq = 0
-            fasta_out_str = ''
-            start_out = start
-            end_out = end
-            start-=1                
-            if contig == 'whole':
-                for fasta_seq,fasta_name in zip(self.seq_lst,self.name_lst):
-                    0<0
-                    if start<=len(fasta_seq):# and end<=len(fasta_seq):
-                        if end<=len(fasta_seq):
-                            #print(fasta_name,start,end)
-                            #print(fasta_seq[start:end])
-                            fasta_out_str +=  ' '.join([fasta_name,str(start),str(end)]) + '\n' +  fasta_seq[start:end] + '\n'
-                            break
-                        else:
-                            #print('WARNING sequence from several contig')
-                            #print(fasta_name,start,len(fasta_seq))
-                            #print(fasta_seq[start:end])
-                            fasta_out_str += ' '.join([fasta_name,str(start),str(len(fasta_seq))]) + '\n' +  fasta_seq[start:end] + '\n'
-                            end-=len(fasta_seq)
-                            start= 0
-                            #print('end=', end)
-                    else:
-                        start-= len(fasta_seq)
-                        end-=len(fasta_seq)
-                        pass
-            else:
-                for fasta_seq,fasta_name in zip(self.seq_lst,self.name_lst):
-                    if contig in fasta_name:
-                        fasta_seq[start,end]
-
-
-        fasta_out = open(contig +' '+ str(start_out) +':'+ str(end_out) + '.fna','w')
-        fasta_out.write(fasta_out_str)
-        fasta_out.close()
-
-        return fasta_out_str
-
-file_fasta = 'test_mini_vcf.fna'
-
-fasta = SequenceFasta(file_fasta)
-fasta.seq_process(strip=True)
-#sequence = ''.join(fasta.seq_lst)
-
-
-def fasta_getter(fasta_path,start=0,end=1):
-    fasta_opened = open(fasta_path)
-    for line in fasta_opened:
-        if line.startswith('>'):
-            print(line)
-        pass
 
 for directory_exp_file in directory_exp_files:    
-    aln_getter(3155636,directory_exp_file,start_inter=500,end_inter=1000,without_ref=True)
+    aln_getter(4489200,directory_exp_file,start_inter=500,end_inter=1000,without_ref=True)
 
 print('end')
