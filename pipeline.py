@@ -107,19 +107,13 @@ for vcf_path in vcf_path_lst:
     logfile = open(logfile_path,'a')
     print('\n'+vcf_path+'\n')
     
-    header2 = 0
-    vcf_head = ''
-    vcf_opened = open(vcf_path)
-    for line in vcf_opened:
-        if '##' in line:
-            vcf_head += line
-            header2 += 1
-    vcf_opened.close()
+    header,vcf_head,type_head = pipeline_base.vcf_head_process(vcf_path)
+
 
     vcf_editer_path = vcf_path[0:-4]+'_editer.vcf'
     vcf_editer_opened = open(vcf_editer_path,'a')
     
-    vcf = pd.read_csv(vcf_path,sep='\t',header = header2)
+    vcf = pd.read_csv(vcf_path,sep='\t',header = header)
     vcf.index = vcf['POS']
     #find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)#!
     vcf,vcf_pos_old_new = pipeline_base.position_editer(vcf.copy(),find_locus,find_source,old_new=True)
@@ -146,7 +140,7 @@ for vcf_path in vcf_path_lst:
         pos_will_del_old.append(vcf_pos_old_new[pos_del])
 
     
-    vcf = pd.read_csv(vcf_path,sep='\t',header = header2)
+    vcf = pd.read_csv(vcf_path,sep='\t',header = header)
     vcf.index = vcf['POS']    
 
     logfile = open(logfile_path,'a')
@@ -237,16 +231,7 @@ with open(merged_vcf_path,'a') as file_merged:
     bcftools_run.wait()
 
 
-#!!
-header = 0
-vcf_head = ''
-vcf_opened = open(merged_vcf_path)
-for line in vcf_opened:
-    if '##' in line:
-        vcf_head += line
-        header += 1
-vcf_opened.close()
-#header+=1
+header,vcf_head,type_head = pipeline_base.vcf_head_process(merged_vcf_path)
 
 
 print('START vcf_merger')
@@ -262,12 +247,6 @@ vcf_merger_run = subprocess.Popen([vcf_merger,
         "-o", merged_final],universal_newlines=True)
 vcf_merger_run.wait()
 
-'''parser.add_argument('-v', '--vcf',action='store', help='File vcf')
-parser.add_argument('-r', '--ref',action='store', help='Reference fasta')
-parser.add_argument('-g', '--gbk-file',action='store', help='File gbk')
-parser.add_argument('-d', '--dir',action='store', help='Work directory')
-parser.add_argument('-l', '--log',action='store', help='Work directory')
-parser.add_argument('-h', '--header-vcf',action='store',default=15, help='Header vcf')'''
 
 logfile.close()
 print('END PIPLINE')

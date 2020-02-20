@@ -172,7 +172,22 @@ def position_editer(vcf,find_locus,find_source,old_new=False):
         return vcf
 
 
+def vcf_head_process(vcf_dir):
+    header = 0
+    vcf_head = ''
+    vcf_opened = open(vcf_dir,'r')
+    for line in vcf_opened:
+        if line.startswith('##'):
+            header += 1
+            vcf_head += line
+            continue
+        elif line.startswith('#'):
+            head_vcf_line = line.strip().split('\t')
+        else:
+            break
+    type_head = {i:str for i in head_vcf_line[9:]}
 
+    return header,vcf_head,type_head
 
 
 
