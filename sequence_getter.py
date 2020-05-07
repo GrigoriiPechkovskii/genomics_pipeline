@@ -51,11 +51,13 @@ if True:
     index_type = 'mauve'
     #name_vcf_simple = 'test_sim.vcf'
     file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
+    file_gbk = os.path.join(os.path.split(directory)[0],'genomics_pipline_supply','AmesAncestor_GCF_000008445.1.gbk')
     name_vcf = 'test_exp_1_group_1.vcf'
 
-    directory_exp_main = '/home/strain4/Desktop/fin_script/exp_super2_4/'
+    directory_exp_main = 'C:\\Users\\Grin\\Desktop\\remote_work\\exp_super2_4\\'
     directory_exp_files = [directory_exp_main + file_name +'/' + file_name for file_name in os.listdir(directory_exp_main) if 'group' in file_name]
 
+    #file_vcf_for_check_un = '/home/strain4/Desktop/fin_script/GI_AAK_2/merged_final_exp_super2_4.vcf'
 
 #some important options
 sort = True
@@ -218,11 +220,19 @@ def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,witho
         #print(title_seq)
 
         pos_set = parser_title(title_seq,directory_file_xmfa)
+        
+        #print(pos_set[1])
+        #print()
+        #print(pos_set[1][1])
 
-        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0:
+        if pos_set[1][0]!= REF or int(pos_set[0][0][1]) == 0 or len(pos_set[1]) == 1:
             print('WARNING pass aln',pos_set[1][0],pos_set[0][0][1])
             continue
-        elif pos_set[1][0]== REF:
+        #if vcf_slice.loc[pos_set[1][1]] == '.':
+        #    continue
+
+        #if pos_set[1][0]== REF:
+        else:
             #print(int(pos_set[0][0][0]), query_pos,int(pos_set[0][0][1]))
             if int(pos_set[0][0][0]) <= position_real <= int(pos_set[0][0][1]):
                 pos = position_real - int(pos_set[0][0][0])
@@ -266,8 +276,15 @@ def aln_getter(query_pos,directory_file_xmfa,start_inter=100,end_inter=100,witho
                 fast_opened.close()
                 return
 
+#vcf = pd.read_table(file_vcf_for_check_un)
+#vcf.index = vcf['#CHROM'].astype(str) + '_' + vcf['POS'].astype(str) + '_' + vcf.index.astype(str)
+#vcf_slice = vcf.loc['NC_007530_1334174_6691']
 
 for directory_exp_file in directory_exp_files:    
-    aln_getter(4489200,directory_exp_file,start_inter=500,end_inter=1000,without_ref=True)
+    aln_getter(746456,directory_exp_file,start_inter=500,end_inter=2000,without_ref=True)
+
+#1395979
+#2534098
+#4352218
 
 print('end')

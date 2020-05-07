@@ -14,7 +14,7 @@ import pandas as pd
 import pipeline_base
 
 
-def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignored=True,info_just_indel=False,drop_info=False):
+def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignored=True,info_just_indel=False,drop_info=False,intervals_alignment_bool=False,intervals_alignment=None):
     '''Function that joins a given window in a vcf file by position'''
     global vcf_slice
     intervals_used = []
@@ -32,10 +32,12 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
                 
         #contig = vcf.loc[pos_start,'#CHROM']
         #print(contig,pos_start,pos_end)
-        vcf_slice = vcf[(pos_start <= vcf['POS']) & (vcf['POS'] <= pos_end) & (vcf['#CHROM']==contig)]       
+        vcf_slice = vcf[(pos_start <= vcf['POS']) & (vcf['POS'] <= pos_end) & (vcf['#CHROM']==contig)]
+
+        #print(vcf_slice)       
 
         if vcf_slice.shape[0] <= 1:
-            print('Warning vcf_slice <= 1',contig,pos_start,pos_end,vcf_slice)
+            print('Warning vcf_slice <= 1',contig,pos_start,pos_end)
 
             if log_file: 
                 log_file.write('Warning vcf_slice <= 1' +'\n')
@@ -45,7 +47,8 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
         if drop_info:
             if len(set(vcf_slice['INFO'].values) - set(drop_info)) == 0:
                 print('Warning vcf slice contain only', *drop_info,set(vcf_slice['INFO'].values),contig,pos_start,pos_end)
-                
+                #print('Warning vcf slice contain only',str([contig,pos_start,pos_end]))
+
                 if log_file:
                     log_file.write('Warning vcf slice contain only' + str([contig,pos_start,pos_end])+'\n')
 
@@ -56,6 +59,7 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
         sample_bin_dict = dict()
 
         position_first = int(vcf_slice.iloc[0]['POS'])
+        index_first = vcf_slice.index[0]
         position_start = int(vcf_slice.iloc[0]['POS'])
         max_over = max([len(ref) + pos - 1 for ref,pos in zip(vcf_slice['REF'],vcf_slice['POS'])])
 
@@ -66,6 +70,7 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
 
         ref_mod = ref_sequence[position_first-1:max_over]
         sample_will_deleted = set()
+        
         
         #check for if overlay out interval
         if fullcheck:
@@ -112,6 +117,39 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
                             log_file.write('Warning gap between defined variant, interval ignored ' + str([pos_start,pos_end])+'\n')
                         
                         continue
+
+        
+
+        if intervals_alignment_bool:
+            intervals_alignment_slice = intervals_alignment[(intervals_alignment['#contig'] == contig ) &
+                #(intervals_alignment['name'] == sample ) &
+                ((intervals_alignment['start_position_ref'] <= pos_start) &
+                (intervals_alignment['end_position_ref']  >= pos_start))|
+
+                ((intervals_alignment['start_position_ref'] <= pos_end)&
+                   (intervals_alignment['end_position_ref'] >= pos_end))]
+            
+            sample_tmp_storage = []
+            #print(pos_start,pos_end)
+            for sample in sample_dict:
+                #intervals_alignment['#contig'] == contig
+
+                #print(sample,pos_start,pos_end)
+                #print(intervals_alignment_slice[intervals_alignment_slice['name'] == sample])
+
+                if intervals_alignment_slice[intervals_alignment_slice['name'] == sample].shape[0] >= 2:
+                    sample_will_deleted.add(sample)
+                    sample_tmp_storage.append(sample)
+                    #print(intervals_alignment_slice[intervals_alignment_slice['name'] == sample])
+                    #print('\n\n\n')           
+
+            if sample_tmp_storage:
+            	print('Warning merge different contig',contig,pos_start,pos_end,sample_tmp_storage)
+            	if log_file:
+            		log_file.write('Warning merge different contig ' + str([contig,pos_start,pos_end,sample_tmp_storage])+'\n')
+
+
+        
         variant = []
         flag_break = False        
         for row_index in vcf_slice.index:
@@ -123,6 +161,7 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
             position_inter = int(vcf_slice.loc[row_index]['POS'])
             #vcf.loc[position_row,'REF'] = ref_mod #maybe need
             for sample in sample_dict:
+
 
                 if vcf_slice.loc[row_index][sample] == '.':
                     #sample_dict[sample]
@@ -210,6 +249,8 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
         sample_uniq_dict[ref_mod] = 0
         sample_seq_set.add(ref_mod)
 
+        
+
         bin_value = 1
         for sample,sample_seq_uniq in sample_dict.items():
             if sample_seq_uniq not in sample_seq_set:
@@ -224,6 +265,8 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
         for sample in sample_dict:
             sample_bin_dict[sample] = sample_uniq_dict[sample_dict[sample]]
         info = '&'.join(info_lst)
+
+        #print('sample_bin_dict =',sample_dict)
 
         '''
         for sample in sample_dict:
@@ -259,7 +302,7 @@ def merge_window(intervals,vcf,ref_sequence,log_file=False,fullcheck=True,ignore
                     'ALT':alt,'QUAL':40,'FILTER':'PASS','INFO':info,'FORMAT':'GT'}
         vcf_variant_dict.update(sample_bin_dict)
 
-        for_merged = pd.Series(vcf_variant_dict,name=position_first)
+        for_merged = pd.Series(vcf_variant_dict,name=index_first)
         vcf.drop(vcf_slice.index,inplace=True)
         vcf = vcf.append(for_merged,ignore_index=False)#!True
 
@@ -466,49 +509,73 @@ if __name__ == "__main__":
     header = int(parser.parse_args().header_vcf)
     out_file = parser.parse_args().out_file
 
-    pd.set_option('display.max_columns', 10)
+    #pd.set_option('display.max_columns', 10)
 
 
     local = False
     test = True
+    local_windows = False
     info_just_indel = False
 
-    if not(local or test):
+
+    if not(local or test or local_windows):
         intervals_path = parser.parse_args().interval.split(',')
         print('intervals_path=',intervals_path)
         ref_assemble_name = os.path.basename(file_fasta)[:-4]
 
     if local:
         directory = os.getcwd()
-        file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/merged.vcf'
-        file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A10_test/vcf_out/vcf_correct_bed10_edit.vcf'
-        file_vcf = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/merged_final_exp_A12_test.vcf'
+
+        file_vcf = '/home/strain5/Desktop/content/exp_super2_4/vcf_out/merged_exp_super2_4.vcf'
         
-        file_fasta = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome_ba/GCF_000008445.1_ASM844v1_genomic.fna'
-        file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
-        work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/'
-        out_file = '/home/strain4/Desktop/fin_script/test_genomics_pipline/exp_A12_test/vcf_out/vcf_merged_777.vcf'
-        log_file_path = work_dir + '/' + 'log_test4444.txt'
+        file_fasta = '/home/strain5/Desktop/content/piplines/genomics_pipline_supply/AmesAncestor_GCF_0000084451.fna'
+        file_gbk = '/home/strain5/Desktop/content/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
+        work_dir = '/home/strain5/Desktop/content/exp_super2_4/vcf_out/'
+
+        out_dir = '/home/strain5/Desktop/content/piplines/genomics_pipline_test/exp1/'
+        out_file = out_dir + 'vcf_merged_777.vcf'
+        log_file_path = out_dir + '/' + 'log_test2.txt'
 
 
         intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if '.bed' in i]
         #intervals_path = ['/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_0.bed', '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_1.bed']
 
         ref_assemble_name = os.path.basename(file_fasta)[:-4]
+    
+    if local_windows:
+        directory = os.getcwd()
+
+        file_vcf = 'C:\\Users\\Grin\\Desktop\\remote_work\\exp_super2_4\\vcf_out\\merged_exp_super2_4.vcf'
+        
+        file_fasta = 'C:\\Users\\Grin\\Desktop\\remote_work\\piplines\\genomics_pipline_supply\\AmesAncestor_GCF_0000084451.fna'
+        file_gbk = 'C:\\Users\\Grin\\Desktop\\remote_work\\piplines\\genomics_pipline_supply\\' + 'AmesAncestor_GCF_000008445.1.gbk'
+        work_dir = 'C:\\Users\\Grin\\Desktop\\remote_work\\exp_super2_4\\vcf_out\\'
+
+        out_dir = 'C:\\Users\\Grin\\Desktop\\remote_work\\piplines\\genomics_pipline_test\\exp2\\'
+        out_file = out_dir + 'vcf_merged_777.vcf'
+        log_file_path = out_dir + 'log_test111.txt'
+
+
+        intervals_path = [work_dir+i for i in os.listdir(work_dir) if '.bed' in i]
+        #intervals_path = ['/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_0.bed', '/home/strain4/Desktop/fin_script/test_genomics_pipline/expA2_test/vcf_out/exp_A2_group_1.bed']
+
+        ref_assemble_name = os.path.basename(file_fasta)[:-4]
 
     if test:
         directory = os.getcwd()
-        file_fasta = directory + '/test/' +'test_merger.fna'
-        file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
-        file_vcf = directory + '/test/' + 'test_merger_alignment_checker.vcf'
-        work_dir = directory + '/test'
-        log_file_path = directory + '/test/' + 'log.txt'
-        #header = 5
-        ref_assemble_name = 'A'
-        out_file = work_dir + '/' + 'test_merger.vcf'
-        intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if '.bed' in i]
-        #intervals_path = [work_dir+'/'+i for i in os.listdir(work_dir) if 'interval' in i]
 
+        file_fasta = os.path.join(directory,'test','test_merger.fna')
+        file_vcf = os.path.join(directory,'test','test_merger_alignment_checker.vcf')
+        work_dir = os.path.join(directory,'test')
+        log_file_path = os.path.join(directory,'test','log.txt')
+
+        out_dir = work_dir
+        out_file = os.path.join(directory,'test','test_merger.vcf')
+        intervals_path = [os.path.join(work_dir,i) for i in os.listdir(work_dir) if i.endswith('.bed')]
+
+        file_gbk = os.path.join(os.path.split(directory)[0],'genomics_pipline_supply','AmesAncestor_GCF_000008445.1.gbk')
+
+        #ref_assemble_name = 'A'
 
 
     log_file = open(log_file_path,'a')
@@ -526,7 +593,8 @@ if __name__ == "__main__":
 
     vcf = pd.read_csv(file_vcf,sep='\t',header = header,dtype=type_head)
     #vcf.index =vcf['POS'].values
-    vcf.index = vcf.index.astype(str) + '_' + vcf['#CHROM'].values.astype(str) + '_' +  vcf['POS'].values.astype(str)
+    #vcf.index = vcf.index.astype(str) + '_' + vcf['#CHROM'].values.astype(str) + '_' +  vcf['POS'].values.astype(str)
+    vcf.index = vcf['#CHROM'].astype(str) + '_' + vcf['POS'].astype(str) + '_' + vcf.index.astype(str)
 
     log_file = open(log_file_path,'a')
     log_file.write('\n'+'Start vcf_corrector'+'\n\n')
@@ -545,13 +613,14 @@ if __name__ == "__main__":
     interval_exact,interval_noexact = definer_overlap_window(vcf_correct_bed,overlap_extra=0,log_file=log_file)
     #print('interval_noexact =',interval_noexact,'interval_exact=',interval_exact)
 
-    vcf_correct_bed.to_csv(work_dir + '/vcf_correct_bed.vcf',sep='\t',index=False)
+    vcf_correct_bed.to_csv(os.path.join(out_dir,'vcf_correct_bed.vcf'),sep='\t',index=False)
 
     log_file = open(log_file_path,'a')
     log_file.write('\n'+'Start merge_window'+'\n\n')
     print('\n'+'Start merge_window'+'\n\n')
-    vcf_merged = merge_window(interval_exact,vcf_correct_bed.copy(),log_file=log_file,ref_sequence=sequence,fullcheck=False,)
-    #vcf_merged = merge_window([['NC_007530',104119, 104120]],vcf.copy(),fullcheck=False)
+    vcf_merged = merge_window(interval_exact,vcf_correct_bed.copy(),log_file=log_file,ref_sequence=sequence,fullcheck=False,intervals_alignment_bool=True,intervals_alignment=intervals_alignment)
+
+    #vcf_merged = merge_window([['A',241, 251]],vcf_correct_bed.copy(),log_file=log_file,ref_sequence=sequence,fullcheck=False,intervals_alignment_bool=True,intervals_alignment=intervals_alignment)
 
     find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)
     vcf_merged = pipeline_base.position_editer(vcf_merged.copy(),find_locus,find_source)

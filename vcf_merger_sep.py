@@ -25,3 +25,4 @@ vcf.index = vcf.index.astype(str) + '_' + vcf['#CHROM'].values.astype(str) + '_'
 
 
 vcf_merged = vcf_merger.merge_window([['A',2, 4]],vcf.copy(),ref_sequence=sequence,fullcheck=False,log_file=False)
+
