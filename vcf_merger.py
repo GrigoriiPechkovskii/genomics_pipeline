@@ -513,7 +513,7 @@ if __name__ == "__main__":
 
 
     local = False
-    test = True
+    test = False
     local_windows = False
     info_just_indel = False
 
@@ -613,7 +613,7 @@ if __name__ == "__main__":
     interval_exact,interval_noexact = definer_overlap_window(vcf_correct_bed,overlap_extra=0,log_file=log_file)
     #print('interval_noexact =',interval_noexact,'interval_exact=',interval_exact)
 
-    vcf_correct_bed.to_csv(os.path.join(out_dir,'vcf_correct_bed.vcf'),sep='\t',index=False)
+    vcf_correct_bed.to_csv(os.path.join(work_dir,'vcf_correct_bed.vcf'),sep='\t',index=False)
 
     log_file = open(log_file_path,'a')
     log_file.write('\n'+'Start merge_window'+'\n\n')

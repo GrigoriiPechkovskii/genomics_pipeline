@@ -8,19 +8,22 @@ import pandas as pd
 
 import pipeline_base
 
+import config
+
 #config
-mauve = '/home/strain4/Desktop/content/bioinf_prog/mauve_snapshot_2015-02-13/linux-x64/progressiveMauve'
-xmfa_to_vcf = './xmfa_to_vcf_demo.py'
-bcftools = '/home/strain4/Desktop/content/bioinf_prog/bcftools/bcftools'
-bgzip = 'bgzip'
-vcf_merger = './vcf_merger.py'
 
+mauve = config.mauve
+xmfa_to_vcf = config.xmfa_to_vcf
+bcftools = config.bcftools
+bgzip = config.bgzip
+vcf_merger = config.vcf_merger
 
-work_dir = '/home/strain4/Desktop/piplines/genomics_pipline_supply/genome/'
-REF = '/home/strain4/Desktop/piplines/genomics_pipline_supply/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_test_B1'
-out_dir = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + name_exp + '/' # / impotant
-file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
+work_dir = config.work_dir
+REF = config.REF
+name_exp = config.name_exp
+out_dir = config.out_dir
+file_gbk = config.file_gbk
+
 
 #header = 15
 BED = True
