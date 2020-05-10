@@ -2,6 +2,7 @@
 =======
 #for test mini
 test_mini.vcf
+config.py
 
 >>>>>>> xmfa_to_vcf/master
 # Byte-compiled / optimized / DLL files

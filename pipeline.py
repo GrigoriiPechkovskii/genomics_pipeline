@@ -6,57 +6,28 @@ import re
 import numpy as np
 import pandas as pd
 
+import pipeline_base
+
+import config
+
 #config
-mauve = '/home/strain4/Desktop/content/bioinf_prog/mauve_snapshot_2015-02-13/linux-x64/progressiveMauve'
-xmfa_to_vcf = '/xmfa_to_vcf_demo.py'
-bcftools = '/home/strain4/Desktop/content/bioinf_prog/bcftools/bcftools'
-bgzip = 'bgzip'
-vcf_merger = '/vcf_merger.py'
 
+mauve = config.mauve
+xmfa_to_vcf = config.xmfa_to_vcf
+bcftools = config.bcftools
+bgzip = config.bgzip
+vcf_merger = config.vcf_merger
 
-work_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/'
-REF = '/home/strain4/Desktop/fin_script/test_genomics_pipline/genome/GCF_000008445.1_ASM844v1_genomic.fna'
-name_exp = 'exp_A13_test'
-out_dir = '/home/strain4/Desktop/fin_script/test_genomics_pipline/' + name_exp + '/' # / impotant
-file_gbk = '/home/strain4/Desktop/piplines/genomics_pipline_supply/' + 'AmesAncestor_GCF_000008445.1.gbk'
+work_dir = config.work_dir
+REF = config.REF
+name_exp = config.name_exp
+out_dir = config.out_dir
+file_gbk = config.file_gbk
+
 
 #header = 15
 BED = True
 pipeline_version = 'pipeline version 0.05\n'
-
-def contig_finder_gbk(file_gbk_dir):
-    ''' '''
-    with open(file_gbk) as file_gbk_opened:
-        file_gbk_read = file_gbk_opened.read()
-        find_locus = re.findall(r'LOCUS\s+(.*?)\s\s+',file_gbk_read)
-        find_source = re.findall(r'\s\s+source\s+(.*?)\s\s+',file_gbk_read)
-
-    find_source = [[*map(int,(i.split('..')))] for i in find_source]
-    find_source_real = find_source.copy()
-    for source_num in range(1,len(find_source)):
-        find_source[source_num] = [find_source[source_num][0] + find_source[source_num-1][1],
-                                   find_source[source_num][1] + find_source[source_num-1][1]]
-    return find_locus, find_source,find_source_real
-
-def contig_definder(position,find_locus,find_source): 
-    ''' ''' 
-    for locus,source in zip(find_locus,find_source):
-        if (source[0] <= position <= source[1]):
-            position_real = position - source[0]+ 1#!
-            return locus,position_real
-
-def position_editer(vcf):
-    vcf_pos_old_new = {}
-    pos_lst = []
-    for position in vcf['POS']:
-        contig,position_real = contig_definder(position,find_locus,find_source)
-        pos_lst.append(position_real)
-        #vcf.loc[position,'POS'] = position_real
-        vcf_pos_old_new[contig+'_'+str(position_real)] = position
-
-    vcf['POS'] = np.array(pos_lst)
-    vcf.index = vcf['POS']
-    return vcf,vcf_pos_old_new
 
 
 os.mkdir(out_dir)
@@ -131,7 +102,7 @@ for num,genome_quary_list in enumerate(genome_grouped):
 
 
 
-find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)
+find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)
 for vcf_path in vcf_path_lst:
     logfile = open(logfile_path,'a')
     logfile.write('\n'+vcf_path+'\n')
@@ -139,22 +110,16 @@ for vcf_path in vcf_path_lst:
     logfile = open(logfile_path,'a')
     print('\n'+vcf_path+'\n')
     
-    header2 = 0
-    vcf_head = ''
-    vcf_opened = open(vcf_path)
-    for line in vcf_opened:
-        if '##' in line:
-            vcf_head += line
-            header2 += 1
-    vcf_opened.close()
+    header,vcf_head,type_head = pipeline_base.vcf_head_process(vcf_path)
+
 
     vcf_editer_path = vcf_path[0:-4]+'_editer.vcf'
     vcf_editer_opened = open(vcf_editer_path,'a')
     
-    vcf = pd.read_csv(vcf_path,sep='\t',header = header2)
+    vcf = pd.read_csv(vcf_path,sep='\t',header = header)
     vcf.index = vcf['POS']
-    #find_locus, find_source ,find_source_real = contig_finder_gbk(file_gbk)#!
-    vcf,vcf_pos_old_new = position_editer(vcf.copy())
+    #find_locus, find_source ,find_source_real = pipeline_base.contig_finder_gbk(file_gbk)#!
+    vcf,vcf_pos_old_new = pipeline_base.position_editer(vcf.copy(),find_locus,find_source,old_new=True)
     vcf_editer_opened.write(vcf_head)    
     vcf_editer_opened.close()
     vcf.to_csv(vcf_editer_path,sep='\t',index=False,mode='a')
@@ -178,7 +143,7 @@ for vcf_path in vcf_path_lst:
         pos_will_del_old.append(vcf_pos_old_new[pos_del])
 
     
-    vcf = pd.read_csv(vcf_path,sep='\t',header = header2)
+    vcf = pd.read_csv(vcf_path,sep='\t',header = header)
     vcf.index = vcf['POS']    
 
     logfile = open(logfile_path,'a')
@@ -269,16 +234,7 @@ with open(merged_vcf_path,'a') as file_merged:
     bcftools_run.wait()
 
 
-#!!
-header = 0
-vcf_head = ''
-vcf_opened = open(merged_vcf_path)
-for line in vcf_opened:
-    if '##' in line:
-        vcf_head += line
-        header += 1
-vcf_opened.close()
-#header+=1
+header,vcf_head,type_head = pipeline_base.vcf_head_process(merged_vcf_path)
 
 
 print('START vcf_merger')
@@ -294,12 +250,6 @@ vcf_merger_run = subprocess.Popen([vcf_merger,
         "-o", merged_final],universal_newlines=True)
 vcf_merger_run.wait()
 
-'''parser.add_argument('-v', '--vcf',action='store', help='File vcf')
-parser.add_argument('-r', '--ref',action='store', help='Reference fasta')
-parser.add_argument('-g', '--gbk-file',action='store', help='File gbk')
-parser.add_argument('-d', '--dir',action='store', help='Work directory')
-parser.add_argument('-l', '--log',action='store', help='Work directory')
-parser.add_argument('-h', '--header-vcf',action='store',default=15, help='Header vcf')'''
 
 logfile.close()
 print('END PIPLINE')

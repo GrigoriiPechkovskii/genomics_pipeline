@@ -1,4 +1,4 @@
-#ref_contig	start_position_ref	end_position_ref	name	start_position_alt	end_position_alt
+#contig	start_position_ref	end_position_ref	name	start_position_alt	end_position_alt
 A	2	11	B	10	20
 A	12	91	B	20	110
 A	92	111	B	192	221
@@ -20,3 +20,6 @@ A	51	90	D	40	145
 A	91	110	D	191	220
 A	110	170	D	320	370
 A	0	0	D	0	0
+A	231	320	C	251	330
+A	241	245	D	251	255
+A	249	320	D	259	330
