@@ -214,7 +214,7 @@ def timecheck(name = 'name_check'):
 
     check_initial_sec = round(time.time() - time_initial,3)
     check_initial_min = round(check_initial_sec / 60,3)       
-    report_line = '{0:.<100}{1:.<10}{2:.<10}{3:.<10}{4:.<10}'.format(name,check_block_sec,check_block_min,check_initial_sec,check_initial_min) + '\n'
+    report_line = '{0:.<100}{1:.<14}{2:.<14}{3:.<14}{4:.<14}'.format(name,check_block_sec,check_block_min,check_initial_sec,check_initial_min) + '\n'
     #print(report_line,end='')
     #with open(HOME_DIRECTORY + 'time_report.txt','a') as time_report:
     #    time_report.write(report_line)    

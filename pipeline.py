@@ -14,7 +14,7 @@ import config
 
 
 
-def mauve_process(genome_grouped,start_num=0,tag=''):   
+def mauve_process(genome_grouped,start_num=66,tag=''):   
 
     #run mauve
     print('mauve_process')
@@ -105,8 +105,9 @@ def xmfa_to_vcf_process(xmfa_dir_lst):
 
             xmfa_to_vcf_run.wait()
 
-
-            log_time.append(pipeline_base.timecheck(name_out))
+            current_time = pipeline_base.timecheck(name_out)
+            log_time.append(current_time)
+            print(current_time)
 
 
     logfile.write(''.join(log_time))
@@ -462,9 +463,9 @@ time_initial = time.time()
 #pipeline_full()
 #pipeline_adding_aln()
 #pipelene_adding_vcf()
-#pipelene_vcf_merger()
+pipelene_vcf_merger()
 
-pipeline_part_aln()
+#pipeline_part_aln()
 
 logfile.close()
 print('END PIPLINE')
