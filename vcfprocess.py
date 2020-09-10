@@ -29,6 +29,7 @@ class VcfData(pd.DataFrame):
 class VcfData():
     '''Main class for vcf (variant calling format) procsising '''
     COLUMNS_STANDARD = ["#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT"]
+    COLUMNS_STANDARD_LENGTH = len(COLUMNS_STANDARD)
 
     def __init__(self,
         DataFrame=pd.DataFrame(columns=COLUMNS_STANDARD),
@@ -45,6 +46,20 @@ class VcfData():
         self.vcf_drop_duplicate(drop_duplicate)
         self.vcf_reindexing(set_uniq_index)
         
+
+        self.dict_can_snp = {'NC_007530_182106':'A.Br.001',
+        'NC_007530_947760':'A.Br.002',
+        'NC_007530_1493280':'A.Br.003',
+        'NC_007530_3600786':'A.Br.004',
+        'NC_007530_162509':'A.Br.006',
+        'NC_007530_266439':'A.Br.007',
+        'NC_007530_3947375':'A.Br.008',
+        'NC_007530_2589947':'A.Br.009',
+        'NC_007530_1458558':'B.Br.001',#!
+        'NC_007530_1056740':'B.Br.002',
+        'NC_007530_1494392':'B.Br.003',
+        'NC_007530_69952':'B.Br.004',
+        'NC_007530_3698013':'A/B.Br.001'}
 
     @property
     def vcf(self):
@@ -123,7 +138,80 @@ class VcfData():
 
 
 
+    def _samples_variation_template_slicer(self,samples_variation_dict):
+        """ Function get samples_variation_dict and return pd.DataFrame sorted slice variation 
+        samples_variation_dict  = {"Name variation":["CHROM", POS]}
+        return pd.DataFrame sorted slice variation with Index from "Name variation"
+        """
+        #Here used loop for right sort
+        template_samples_variation = pd.DataFrame()
+        for key, val in samples_variation_dict.items():
+            chrom_value = val[0]
+            pos_value = int(val[1])
+
+            template_samples_variation_val = self.__vcf[(self.__vcf['POS'] == pos_value) & (self.__vcf['#CHROM'] == chrom_value)]
+            
+            if not template_samples_variation_val.empty:
+                template_samples_variation_val.index  = [key]
+                template_samples_variation = template_samples_variation.append(template_samples_variation_val)
+            else:
+                raise ValueError("Variation " + key + " not found")
+
+        self.template_samples_variation = template_samples_variation.iloc[:,9:]
+        
+        return self.template_samples_variation
+
+
+    def to_genotype(self,template_genotype,samples_variation_dict):#!
+        '''NA'''
+        #samples_variants_for_genotype
+        self.template_samples_variation = self._samples_variation_template_slicer(samples_variation_dict)
+
+        if isinstance(template_genotype,pd.DataFrame):
+            self.template_genotype = template_genotype
+        else:
+            raise TypeError("template_genotype must be pd.DataFrame")
+        
+        self.genotype = pd.Series()
+        
+        for template_var in self.template_genotype:
+            for sample_var in self.template_samples_variation:
+                df = pd.DataFrame({"Value_template_genotype":self.template_genotype[template_var], 
+                                   "Value_sample_genotype":self.template_samples_variation[sample_var]})#!
+                if ((df['Value_sample_genotype']).astype(str) == '.').any():
+                    self.genotype[sample_var] = np.nan                    
+                elif (df['Value_template_genotype'].astype(int) == df['Value_sample_genotype'].astype(int)).all():#! 222               
+                    self.genotype[sample_var] = template_var
+                    
+        self.genotype = self.genotype[self.__vcf.columns[:self.COLUMNS_STANDARD_LENGTH]] #sort   
+
+
+
 if __name__  == "__main__":
 
-    vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
-    vcf_inst = VcfData(vcf_inst.copy())
+
+    samples_variation_dict = { 
+                    'A.Br.001': ['NC_007530', 182106],
+                    'A.Br.002': ['NC_007530', 947760],
+                    'A.Br.003': ['NC_007530', 1493280],
+                    'A.Br.004': ['NC_007530', 3600786],
+                    'A.Br.006': ['NC_007530', 162509],
+                    'A.Br.007': ['NC_007530', 266439],
+                    'A.Br.008': ['NC_007530', 3947375],
+                    'A.Br.009': ['NC_007530', 2589947],
+                    'B.Br.001': ['NC_007530', 1458558],
+                    'B.Br.002': ['NC_007530', 1056740],
+                    'B.Br.003': ['NC_007530', 1494392],
+                    'B.Br.004': ['NC_007530', 69952],
+                    'A/B.Br.001': ['NC_007530', 3698013]}
+
+    #vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
+    #vcf_inst = VcfData(vcf_inst.copy())
+    #del vcf_reader
+
+    df_can_ert = pd.read_table('can_snp_ert.csv', sep=',', engine='python',header=0)
+    df_can_ert.index = df_can_ert['canSNP lineage/group']
+    df_can_ert = df_can_ert.iloc[:,8:21].T   
+
+    vcf_inst.to_genotype(df_can_ert,samples_variation_dict)
+    vcf_inst.genotype 
