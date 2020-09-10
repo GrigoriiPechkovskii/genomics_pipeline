@@ -14,7 +14,7 @@ import config
 
 
 
-def mauve_process(genome_grouped,start_num=66,tag=''):   
+def mauve_process(genome_grouped,start_num=234,tag=''):   
 
     #run mauve
     print('mauve_process')
