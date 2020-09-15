@@ -227,7 +227,8 @@ class VcfData():
     def compute_param(self,number_variation=True, length_variation=True, mass_variation=True,delimiter="_"):
         """ """
         series_lst = []
-        for num_row,variant_series in self.vcf.astype('str').iterrows():
+        for num_row,variant_series in self.vcf.astype('object').iterrows():
+
             variant_lst = variant_series['REF'].split(',') + variant_series['ALT'].split(',')
             variant_dict = dict()
             for num, val in enumerate(variant_lst):
@@ -240,9 +241,17 @@ class VcfData():
                     param_lst.append(str(self._lenmass(val)))
 
                 variant_dict[str(num)] = delimiter.join(param_lst)
+                variant_dict[num] = delimiter.join(param_lst) #!for int
+            
+            #print("\n")            
+            #print(variant_series.name,variant_dict)
+            #print(variant_series)
 
             variant_dict['.'] = '.'    
-            series_lst.append(variant_series.replace(variant_dict))
+            series_lst.append(variant_series.astype('object').replace(variant_dict))
+
+            #print(variant_series.astype('object').replace(variant_dict))
+
         self.vcf_param = pd.DataFrame(series_lst)
 
 
@@ -365,8 +374,35 @@ class VcfData():
 
 if __name__  == "__main__":
 
-    vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
+    import unittest
+
+    class TestVcfData(unittest.TestCase):
+
+        def test_upper(self):
+            self.assertEqual('FOO', 'FOO')
+
+        def test_genotype(self):
+            test_inst_genotype = pd.Series({"B":"genotype1","C":"genotype2",
+                                            "D":np.nan,"E":"genotype1",
+                                            "K":"genotype3","Z":np.nan})
+            self.assertEqual(list(vcf_inst.genotype.values), list(test_inst_genotype.values))
+            self.assertEqual(list(vcf_inst.genotype.index), list(test_inst_genotype.index))
+
+
+    samples_variation_dict = { 
+                    'SNP01': ['A', 3],
+                    'SNP02': ['A', 401],
+                    'SNP03': ['A', 405],}    
+
+    vcf_inst = pd.read_csv(os.path.join(".",'test','test_vcf.vcf'),sep='\t',header=5)
+    #vcf_inst = vcf_inst.astype("object")
     vcf_inst = VcfData(vcf_inst.copy())
     #del vcf_reader
-
+    template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
+                                        index=["SNP01","SNP02","SNP03"])
     
+    named_variation = vcf_inst.samples_variation_template_slicer(samples_variation_dict)
+    named_variation = vcf_inst.genotype_on_variation(template_for_genotype,samples_variation_dict)
+    vcf_inst.genotype
+
+    unittest.main(exit=False)
