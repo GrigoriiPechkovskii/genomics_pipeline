@@ -3,12 +3,15 @@ import sys
 import csv
 import os
 import warnings
+import time
+
 
 #import importlib
 
 import numpy as np
 import pandas as pd
 #import matplotlib.pyplot as plt
+
 
 
 print('start vcfproc')
@@ -24,6 +27,15 @@ class VcfData(pd.DataFrame):
 
         #self.index = self['POS']
         #self.DataFrame = DataFrame
+
+
+def timer_decor(func):
+    def wrapper(*arg):
+        start_time = time.time()
+        func(*arg)
+        result_time = round((time.time() - start_time),2)
+        print(result_time, "second")
+    return wrapper
 
 
 class VcfData():
@@ -210,26 +222,28 @@ class VcfData():
         else:
             raise AttributeError("Vcf do not have altname_variation")
 
-    def compute_varlen (self):
-        #self.vcf_binlen = pd.DataFrame()
-        series_lst = []
-        for num,variant_series in self.vcf.astype(str).iterrows():
-            variant_lst = variant_series['REF'].split(',') + variant_series['ALT'].split(',')
-            variant_dict = {str(num):len(val) for num,val in enumerate(variant_lst)}
-            variant_dict['.'] = '.'    
-            series_lst.append(variant_series.astype(str).replace(variant_dict))
 
-        self.vcf_varlen = pd.DataFrame(series_lst)
-
-    def compute_binlen (self):
-        #self.vcf_binlen = pd.DataFrame()
+    @timer_decor
+    def compute_param(self,number_variation=True, length_variation=True, mass_variation=True,delimiter="_"):
+        """ """
         series_lst = []
-        for num,variant_series in self.vcf.astype('str').iterrows():
+        for num_row,variant_series in self.vcf.astype('str').iterrows():
             variant_lst = variant_series['REF'].split(',') + variant_series['ALT'].split(',')
-            variant_dict = {str(num):str(num) +'_'+ str(len(val)) + '_' + str(self._lenmass(val)) for num,val in enumerate(variant_lst)}
+            variant_dict = dict()
+            for num, val in enumerate(variant_lst):
+                param_lst = []
+                if number_variation:
+                    param_lst.append(str(num))
+                if length_variation:
+                    param_lst.append(str(len(val)))
+                if mass_variation:
+                    param_lst.append(str(self._lenmass(val)))
+
+                variant_dict[str(num)] = delimiter.join(param_lst)
+
             variant_dict['.'] = '.'    
             series_lst.append(variant_series.replace(variant_dict))
-        self.vcf_binlen = pd.DataFrame(series_lst)
+        self.vcf_param = pd.DataFrame(series_lst)
 
 
     def _lenvar(self,var):
@@ -322,17 +336,6 @@ class VcfData():
                     snp_lst_uniq += [list(a.index.values)]
                     df_res.drop(a.index.values,axis=1,inplace=True)
 
-        #Determining the frequency of snp in the cor genome (in conjunction with canSnp)
-        #The name of the group of identical SNPs was taken from the first position in this group
-        freq_snp = {}
-        snp_used = []
-        count = 0
-        for snp_uniq in snp_lst_uniq:
-
-            if snp_uniq not in snp_used:
-                count += 1
-                n = len(snp_uniq)
-                freq_snp[snp_uniq[0]] = n
         return snp_lst_uniq
 
 
@@ -359,8 +362,11 @@ class VcfData():
                 uniq_number += 1
 
 
+
 if __name__  == "__main__":
 
     vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
     vcf_inst = VcfData(vcf_inst.copy())
     #del vcf_reader
+
+    
