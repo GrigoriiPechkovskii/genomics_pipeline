@@ -1,40 +1,24 @@
-import re
-import sys
-import csv
 import os
 import warnings
 import time
 
-
-#import importlib
-
 import numpy as np
 import pandas as pd
-#import matplotlib.pyplot as plt
 
-
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 
 print('start vcfproc')
 
-
-
-class VcfData(pd.DataFrame):
-    '''Main class for vcf (variant calling format) procsising '''
-
-    def __init__(self,DataFrame=pd.DataFrame()):
-        super().__init__()
-        self.vcf = DataFrame
-
-        #self.index = self['POS']
-        #self.DataFrame = DataFrame
-
-
 def timer_decor(func):
-    def wrapper(*arg):
+    def wrapper(*arg,**kwargs):
         start_time = time.time()
-        func(*arg)
+        loop = 50
+        for _ in range(loop):
+            result = func(*arg)
+        
         result_time = round((time.time() - start_time),2)
-        print(result_time, "second")
+        print("Function",func.__name__, "spend time in",loop , "loop = ", result_time, "second")
+        return result
     return wrapper
 
 
@@ -109,7 +93,7 @@ class VcfData():
         if columns_na_sum != 0:
             warnings.warn("Warning vcf contains NA in " + str(columns_na_sum) + " columns" ,stacklevel=2)
 
-        if any(correct_pass) == True:
+        if all(correct_pass):
             return DataFrame
         else:
             raise TypeError("Vcf is incorrect")
@@ -126,7 +110,7 @@ class VcfData():
     def vcf_drop_duplicate(self,drop_duplicate=True):
 
         #if drop_duplicate:
-        index_duplicated = self.__vcf[self.__vcf.duplicated(keep=False)].index
+        index_duplicated = self.__vcf[self.__vcf[['#CHROM',"POS"]].duplicated(keep=False)].index
         if not index_duplicated.empty:
             if drop_duplicate:
                 warnings.warn('Warning vcf have duplicate! Duplicate deleted, Deleted row = ' + str(len(index_duplicated)),stacklevel=2)
@@ -222,8 +206,6 @@ class VcfData():
         else:
             raise AttributeError("Vcf do not have altname_variation")
 
-
-    @timer_decor
     def compute_param(self,number_variation=True, length_variation=True, mass_variation=True,delimiter="_"):
         """ """
         series_lst = []
@@ -241,16 +223,10 @@ class VcfData():
                     param_lst.append(str(self._lenmass(val)))
 
                 variant_dict[str(num)] = delimiter.join(param_lst)
-                variant_dict[num] = delimiter.join(param_lst) #!for int
-            
-            #print("\n")            
-            #print(variant_series.name,variant_dict)
-            #print(variant_series)
+                variant_dict[num] = delimiter.join(param_lst) #!for int            
 
             variant_dict['.'] = '.'    
             series_lst.append(variant_series.astype('object').replace(variant_dict))
-
-            #print(variant_series.astype('object').replace(variant_dict))
 
         self.vcf_param = pd.DataFrame(series_lst)
 
@@ -371,6 +347,45 @@ class VcfData():
                 uniq_number += 1
 
 
+def recluster_variant(vcf_data,variant_index,distance_pair=10):
+    """ Functioin change value in vcf sample depending clustering (in present depending mass clustering)
+        Input VcfData type,
+        variant_index - vcf index variant which will be clustering
+        distance_pair - min value for different cluster
+        return clustered DataFrame 
+
+    """
+    
+    new_cluster_df = pd.DataFrame(columns=vcf_data.vcf_bin.columns)
+    
+    for variant_index in variant_index:
+        
+        variation_condition_without_na = vcf_data.vcf.loc[variant_index][9:] != '.'
+        slice_variant_len = vcf_data.vcf_param.loc[variant_index][9:][variation_condition_without_na]
+        old_cluster_series = vcf_data.vcf.loc[variant_index][9:][variation_condition_without_na]
+
+        slice_variant_len_reshape = np.reshape(slice_variant_len.values.astype(int), (len(slice_variant_len.values.astype(int)), 1))
+        link = linkage(slice_variant_len_reshape,method='average', metric='euclidean')
+        find_cluster = fcluster(link, distance_pair,criterion = 'distance')
+        
+        find_cluster_series = pd.Series(find_cluster,slice_variant_len.index)
+        new_cluster_series = old_cluster_series.copy()
+
+        zero_new = find_cluster_series.loc[old_cluster_series[old_cluster_series == '0'].index].values[0]#!check all values
+
+        for i,j in zip(old_cluster_series.index,find_cluster_series.values):
+            if new_cluster_series[i] == 0:
+                continue
+            elif j == zero_new:
+                new_cluster_series[i] = 0
+            else:
+                new_cluster_series[i] = j
+
+        new_cluster_series.update(new_cluster_series[new_cluster_series>zero_new] - 1)
+        new_cluster_df = new_cluster_df.append(new_cluster_series)
+
+    return new_cluster_df
+
 
 if __name__  == "__main__":
 
@@ -378,31 +393,95 @@ if __name__  == "__main__":
 
     class TestVcfData(unittest.TestCase):
 
-        def test_upper(self):
-            self.assertEqual('FOO', 'FOO')
-
         def test_genotype(self):
             test_inst_genotype = pd.Series({"B":"genotype1","C":"genotype2",
                                             "D":np.nan,"E":"genotype1",
                                             "K":"genotype3","Z":np.nan})
-            self.assertEqual(list(vcf_inst.genotype.values), list(test_inst_genotype.values))
-            self.assertEqual(list(vcf_inst.genotype.index), list(test_inst_genotype.index))
+            self.assertEqual(list(vcf_inst.genotype.values), list(test_inst_genotype.values), "Incorrect genotype")
+            self.assertEqual(list(vcf_inst.genotype.index), list(test_inst_genotype.index), "Incorrect genotype")
+
+        def test_recluster_variant(self):
+            new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
+            recluster_df_test = pd.DataFrame(data=[[0, 0, 1, 1, np.nan, 1],[1, 0, 1, np.nan, 0, 0]],
+                                             columns=['B', 'C', 'D', 'E', 'K', 'Z'],
+                                             index=['A_481_21', 'A_583_22'])
+            self.assertTrue((new_cluster_df.fillna(-1) == recluster_df_test.fillna(-1)).all(axis=None), "Incorrect genotype recluster variant")
 
 
     samples_variation_dict = { 
                     'SNP01': ['A', 3],
                     'SNP02': ['A', 401],
-                    'SNP03': ['A', 405],}    
+                    'SNP03': ['A', 405],}
 
-    vcf_inst = pd.read_csv(os.path.join(".",'test','test_vcf.vcf'),sep='\t',header=5)
+
+    vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
     #vcf_inst = vcf_inst.astype("object")
     vcf_inst = VcfData(vcf_inst.copy())
     #del vcf_reader
     template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
                                         index=["SNP01","SNP02","SNP03"])
-    
+
     named_variation = vcf_inst.samples_variation_template_slicer(samples_variation_dict)
     named_variation = vcf_inst.genotype_on_variation(template_for_genotype,samples_variation_dict)
     vcf_inst.genotype
 
+    vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
+    vcf_inst.vcf_param
+
+    var_ind = ["A_481_21","A_583_22"]
+    new_cluster_df = recluster_variant(vcf_inst,var_ind,distance_pair=10)
+ 
+
     unittest.main(exit=False)
+
+
+    samples_variation_dict = { 
+                    'A.Br.001': ['NC_007530', 182106],
+                    'A.Br.002': ['NC_007530', 947760],
+                    'A.Br.003': ['NC_007530', 1493280],
+                    'A.Br.004': ['NC_007530', 3600786],
+                    'A.Br.006': ['NC_007530', 162509],
+                    'A.Br.007': ['NC_007530', 266439],
+                    'A.Br.008': ['NC_007530', 3947375],
+                    'A.Br.009': ['NC_007530', 2589947],
+                    'B.Br.001': ['NC_007530', 1458558],
+                    'B.Br.002': ['NC_007530', 1056740],
+                    'B.Br.003': ['NC_007530', 1494392],
+                    'B.Br.004': ['NC_007530', 69952],
+                    'A/B.Br.001': ['NC_007530', 3698013]}
+
+
+    #vcf_inst = pd.read_csv('merged_final_exp_super2_4_2.vcf',sep='\t',header=0, low_memory=False)
+    #vcf_inst = vcf_inst.astype("object")
+    #vcf_inst = VcfData(vcf_inst.copy())
+
+    #vcf_inst = pd.read_csv('parsnp_snp2.vcf',sep='\t',header=0,keep_default_na=False)
+    #vcf_inst = VcfData(vcf_inst)
+
+    #vcf_inst = pd.read_csv('merged_final_exp_super5.vcf',sep='\t',header=0)
+    #vcf_inst = VcfData(vcf_inst.copy())
+
+    #чтение таблички canSNP из статьи V. Ert для сравнение с извлеченными из core genome alignment
+    #df_can_ert = pd.read_table('can_snp_ert.csv', sep=',', engine='python',header=0)
+    #df_can_ert.index = df_can_ert['canSNP lineage/group']
+    #df_can_ert = df_can_ert.iloc[:,8:21].T
+
+    #locus_dir = "locus_cut.csv"
+
+    #determine_locus_index = vcf_inst.determine_locus(locus_dir)
+
+    #named_variation = vcf_inst.genotype_on_variation(df_can_ert,samples_variation_dict)
+
+    #vcf_inst.definition_core_vcf(type_core="SNP")
+    #vcf_inst.to_set_snptype()
+    
+    #vcf_inst.compute_param()
+
+    #vcf_inst.compute_binlen()
+
+
+    #vcf_inst.altname_variation
+    #vcf_inst.altname_variation[vcf_inst.altname_variation.notna()]
+    #u = vcf_inst.snp_uniq_finder()
+    
+    
