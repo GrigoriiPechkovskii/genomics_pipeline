@@ -37,8 +37,6 @@ class VcfData():
         
         self.__vcf = self.__check_correctness_vcf(DataFrame)
 
-        #self.__vcf_bin = self.__vcf.iloc[:,9:].copy()#!!!must remove 
-
         self.vcf_drop_duplicate(drop_duplicate)
         self.vcf_uniq_reindexing(set_uniq_index)
 
@@ -51,14 +49,13 @@ class VcfData():
     def vcf(self,DataFrame):
         self.__vcf = self.__check_correctness_vcf(DataFrame)
 
-        #self.__vcf_bin = self.__vcf.iloc[:,9:].copy() #!!!must remove
-
     @vcf.deleter
     def vcf(self):
         del self.__vcf
 
     @property
     def vcf_bin(self):
+        """ vcf without standart calumns """
             return self.__vcf.iloc[:,self.COLUMNS_STANDARD_LENGTH:]
 
     def __check_correctness_vcf(self,DataFrame):
@@ -108,8 +105,7 @@ class VcfData():
             self.__vcf.index = self.__vcf['#CHROM'] + '_' + self.__vcf['POS'].astype(str)
 
     def vcf_drop_duplicate(self,drop_duplicate=True):
-
-        #if drop_duplicate:
+        """ Delete row with duplicat CHROM, POS columns """
         index_duplicated = self.__vcf[self.__vcf[['#CHROM',"POS"]].duplicated(keep=False)].index
         if not index_duplicated.empty:
             if drop_duplicate:
@@ -148,8 +144,7 @@ class VcfData():
 
         samples_variation_dict  - pd.DataFrame returned _samples_variation_template_slicer()
         return named_variation - dict {"index_vcf": "Name variation"}
-        '''
-        #self.template_samples_variation = self.samples_variation_template_slicer(samples_variation_dict)
+        '''        
         named_variation = self.samples_variation_template_slicer(samples_variation_dict)
         self.template_samples_variation = self.vcf_bin.loc[named_variation].rename(index=named_variation)
 
@@ -296,11 +291,6 @@ class VcfData():
         else:
             raise ValueError("Argument type_core must be 'TOTAL' or 'SNP'")
 
-
-    #The presence of a unique snp in the core genome
-    #df_res = df_vcf_extend.vcf.T.copy()
-    #The presence of a unique snp in the core genome
-    #df_res = df_vcf_extend.vcf.T.copy()
     def snp_uniq_finder(self):        
         
         dict_can_snp = samples_variation_dict
@@ -315,7 +305,7 @@ class VcfData():
             if i in df_res.columns:
 
                 logic = df_res.eq(df_res[i], axis=0).all()#compare each snp with the entire dataframe
-                a = logic[logic]#sclice
+                a = logic[logic]
 
                 if list(a.index.values) not in snp_lst_uniq:
                     snp_lst_uniq += [list(a.index.values)]
@@ -433,55 +423,3 @@ if __name__  == "__main__":
  
 
     unittest.main(exit=False)
-
-
-    samples_variation_dict = { 
-                    'A.Br.001': ['NC_007530', 182106],
-                    'A.Br.002': ['NC_007530', 947760],
-                    'A.Br.003': ['NC_007530', 1493280],
-                    'A.Br.004': ['NC_007530', 3600786],
-                    'A.Br.006': ['NC_007530', 162509],
-                    'A.Br.007': ['NC_007530', 266439],
-                    'A.Br.008': ['NC_007530', 3947375],
-                    'A.Br.009': ['NC_007530', 2589947],
-                    'B.Br.001': ['NC_007530', 1458558],
-                    'B.Br.002': ['NC_007530', 1056740],
-                    'B.Br.003': ['NC_007530', 1494392],
-                    'B.Br.004': ['NC_007530', 69952],
-                    'A/B.Br.001': ['NC_007530', 3698013]}
-
-
-    #vcf_inst = pd.read_csv('merged_final_exp_super2_4_2.vcf',sep='\t',header=0, low_memory=False)
-    #vcf_inst = vcf_inst.astype("object")
-    #vcf_inst = VcfData(vcf_inst.copy())
-
-    #vcf_inst = pd.read_csv('parsnp_snp2.vcf',sep='\t',header=0,keep_default_na=False)
-    #vcf_inst = VcfData(vcf_inst)
-
-    #vcf_inst = pd.read_csv('merged_final_exp_super5.vcf',sep='\t',header=0)
-    #vcf_inst = VcfData(vcf_inst.copy())
-
-    #чтение таблички canSNP из статьи V. Ert для сравнение с извлеченными из core genome alignment
-    #df_can_ert = pd.read_table('can_snp_ert.csv', sep=',', engine='python',header=0)
-    #df_can_ert.index = df_can_ert['canSNP lineage/group']
-    #df_can_ert = df_can_ert.iloc[:,8:21].T
-
-    #locus_dir = "locus_cut.csv"
-
-    #determine_locus_index = vcf_inst.determine_locus(locus_dir)
-
-    #named_variation = vcf_inst.genotype_on_variation(df_can_ert,samples_variation_dict)
-
-    #vcf_inst.definition_core_vcf(type_core="SNP")
-    #vcf_inst.to_set_snptype()
-    
-    #vcf_inst.compute_param()
-
-    #vcf_inst.compute_binlen()
-
-
-    #vcf_inst.altname_variation
-    #vcf_inst.altname_variation[vcf_inst.altname_variation.notna()]
-    #u = vcf_inst.snp_uniq_finder()
-    
-    
