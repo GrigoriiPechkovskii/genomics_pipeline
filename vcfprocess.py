@@ -29,13 +29,15 @@ class VcfData():
 
     def __init__(self,
         DataFrame=pd.DataFrame(columns=COLUMNS_STANDARD),
-        set_uniq_index=True, drop_duplicate=True, delete_variation_with_non_standard_nucleotide=True):
+        set_uniq_index=True, drop_duplicate=True, delete_variation_with_non_standard_nucleotide=True,
+        drop_variation_with_na_in_ref_and_alt=True):
         """ Constructor for VcfData object
         VcfData required pd.DataFrame with vcf (variant calling format) format
         set_uniq_index : changing pd.DataFrame index on index = CHROM + POS + uniq number with '_' as delimiter
         """
         
-        self.__vcf = self.__check_correctness_vcf(DataFrame,delete_variation_with_non_standard_nucleotide)
+        self.__vcf = self.__check_correctness_vcf(DataFrame,delete_variation_with_non_standard_nucleotide,
+                                                  drop_variation_with_na_in_ref_and_alt)
 
         self.vcf_drop_duplicate(drop_duplicate)
         self.vcf_uniq_reindexing(set_uniq_index)
@@ -58,7 +60,8 @@ class VcfData():
         """ vcf without standart calumns """
         return self.__vcf.iloc[:,self.COLUMNS_STANDARD_LENGTH:]
 
-    def __check_correctness_vcf(self,DataFrame,delete_variation_with_non_standard_nucleotide):
+    def __check_correctness_vcf(self,DataFrame,delete_variation_with_non_standard_nucleotide=True,
+                                drop_variation_with_na_in_ref_and_alt=True):
         """ Check type vcf, header etc...
         Type vcf must be pd.DataFrame
         Columns name from position 0 to 9 must be  ["#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT"]
@@ -73,13 +76,15 @@ class VcfData():
         if all(DataFrame.columns[0:9] == self.COLUMNS_STANDARD):
             correct_pass.append(True)
         else:
-            raise TypeError("Vcf columns is incorrect")
+            raise TypeError("Vcf columns is incorrect", DataFrame.columns[0:9])
 
         index_na_exist = DataFrame[DataFrame['ALT'].isna()].index.append(DataFrame[DataFrame['REF'].isna()].index)
         if not index_na_exist.empty:
-            DataFrame.drop(index_na_exist,inplace=True)
-            warnings.warn("Warning vcf have NA value in REF or ALT columns. Deleted row = " + str(len(index_na_exist)),stacklevel=2)
-
+            if drop_variation_with_na_in_ref_and_alt:
+                DataFrame.drop(index_na_exist,inplace=True)
+                warnings.warn("Warning vcf have NA value in REF or ALT columns. Deleted row = " + str(len(index_na_exist)),stacklevel=2)
+            else:
+                warnings.warn("Warning vcf have NA value in REF or ALT columns. NOT Deleted row = " + str(len(index_na_exist)),stacklevel=2)
         #
         index_contains_non_standard_nucleotide = DataFrame[DataFrame['REF'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X').fillna(False)].index
         index_contains_non_standard_nucleotide = index_contains_non_standard_nucleotide.append(DataFrame[DataFrame['ALT'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X').fillna(False)].index)
@@ -91,9 +96,9 @@ class VcfData():
                 warnings.warn("Warning vcf contains non standard nucleotide NA value in REF or ALT columns. Row not deleted.  Row  = " + str(len(index_contains_non_standard_nucleotide)),stacklevel=2)
 
         
-        columns_na_sum = sum(DataFrame.isna().any(axis=1))
+        columns_na_sum = sum(DataFrame.iloc[:,self.COLUMNS_STANDARD_LENGTH:].isna().any(axis=1))
         if columns_na_sum != 0:
-            warnings.warn("Warning vcf contains NA in " + str(columns_na_sum) + " columns" ,stacklevel=2)
+            warnings.warn("Warning vcf sample contains NA in " + str(columns_na_sum) + " columns" ,stacklevel=2)
 
         if all(correct_pass):
             return DataFrame
@@ -158,7 +163,7 @@ class VcfData():
         else:
             raise TypeError("template_for_genotype must be pd.DataFrame")
         
-        self.genotype = pd.Series()
+        self.genotype = pd.Series(dtype='object')
         
         for template_var in self.template_for_genotype:
             for sample_var in self.template_samples_variation:
@@ -423,6 +428,8 @@ def replace_non_standart_nucleotide_to_na_values(data):
         data.drop(data[data['ALT'] == ''].index, inplace=True)
         data.drop(data[data['REF'] == ''].index, inplace=True)
 
+        return data
+
 
 
 if __name__  == "__main__":
@@ -478,11 +485,12 @@ if __name__  == "__main__":
                                         index=["SNP01","SNP02","SNP03"])
 
     test_vcf_file = os.path.join('.','test','test_vcf.vcf')
-    vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=5)
+    vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=0)
     #vcf_inst = vcf_inst.astype("object")
-    vcf_inst = VcfData(vcf_inst.copy(),delete_variation_with_non_standard_nucleotide = True)
-    #del vcf_reader
+    vcf_inst = VcfData(vcf_inst.copy(),drop_duplicate=True,delete_variation_with_non_standard_nucleotide = True,
+        drop_variation_with_na_in_ref_and_alt=True)
     
+    '''
     template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
                                         index=["SNP01","SNP02","SNP03"])
 
@@ -492,8 +500,9 @@ if __name__  == "__main__":
 
     vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
     vcf_inst.vcf_param
+    
  
-     
-    replace_non_standart_nucleotide_to_na_values(vcf_inst)
+    dv = replace_non_standart_nucleotide_to_na_values(vcf_inst)
+    '''
 
     unittest.main(exit=False)
