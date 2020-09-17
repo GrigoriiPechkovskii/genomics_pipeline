@@ -12,7 +12,7 @@ print('start vcfproc')
 def timer_decor(func):
     def wrapper(*arg,**kwargs):
         start_time = time.time()
-        loop = 50
+        loop = 200
         for _ in range(loop):
             result = func(*arg)
         
@@ -29,13 +29,13 @@ class VcfData():
 
     def __init__(self,
         DataFrame=pd.DataFrame(columns=COLUMNS_STANDARD),
-        set_uniq_index=True, drop_duplicate=True):
+        set_uniq_index=True, drop_duplicate=True, delete_variation_with_non_standard_nucleotide=True):
         """ Constructor for VcfData object
         VcfData required pd.DataFrame with vcf (variant calling format) format
         set_uniq_index : changing pd.DataFrame index on index = CHROM + POS + uniq number with '_' as delimiter
         """
         
-        self.__vcf = self.__check_correctness_vcf(DataFrame)
+        self.__vcf = self.__check_correctness_vcf(DataFrame,delete_variation_with_non_standard_nucleotide)
 
         self.vcf_drop_duplicate(drop_duplicate)
         self.vcf_uniq_reindexing(set_uniq_index)
@@ -56,9 +56,9 @@ class VcfData():
     @property
     def vcf_bin(self):
         """ vcf without standart calumns """
-            return self.__vcf.iloc[:,self.COLUMNS_STANDARD_LENGTH:]
+        return self.__vcf.iloc[:,self.COLUMNS_STANDARD_LENGTH:]
 
-    def __check_correctness_vcf(self,DataFrame):
+    def __check_correctness_vcf(self,DataFrame,delete_variation_with_non_standard_nucleotide):
         """ Check type vcf, header etc...
         Type vcf must be pd.DataFrame
         Columns name from position 0 to 9 must be  ["#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT"]
@@ -80,12 +80,17 @@ class VcfData():
             DataFrame.drop(index_na_exist,inplace=True)
             warnings.warn("Warning vcf have NA value in REF or ALT columns. Deleted row = " + str(len(index_na_exist)),stacklevel=2)
 
+        #
         index_contains_non_standard_nucleotide = DataFrame[DataFrame['REF'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X').fillna(False)].index
         index_contains_non_standard_nucleotide = index_contains_non_standard_nucleotide.append(DataFrame[DataFrame['ALT'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X').fillna(False)].index)
         if not index_contains_non_standard_nucleotide.empty:
-            DataFrame.drop(index_contains_non_standard_nucleotide,inplace=True)
-            warnings.warn("Warning vcf contains non standard nucleotide NA value in REF or ALT columns. Deleted row = " + str(len(index_contains_non_standard_nucleotide)),stacklevel=2)
+            if delete_variation_with_non_standard_nucleotide:
+                DataFrame.drop(index_contains_non_standard_nucleotide,inplace=True)
+                warnings.warn("Warning vcf contains non standard nucleotide NA value in REF or ALT columns. Deleted row = " + str(len(index_contains_non_standard_nucleotide)),stacklevel=2)
+            else:
+                warnings.warn("Warning vcf contains non standard nucleotide NA value in REF or ALT columns. Row not deleted.  Row  = " + str(len(index_contains_non_standard_nucleotide)),stacklevel=2)
 
+        
         columns_na_sum = sum(DataFrame.isna().any(axis=1))
         if columns_na_sum != 0:
             warnings.warn("Warning vcf contains NA in " + str(columns_na_sum) + " columns" ,stacklevel=2)
@@ -376,6 +381,49 @@ def recluster_variant(vcf_data,variant_index,distance_pair=10):
 
     return new_cluster_df
 
+def replace_non_standart_nucleotide_to_na_values(data):
+        """ Function replace non standart nucleotide to na values (.)
+            If variation cosnsist only  of variont with non standart nucleotide
+            variation will delete
+            Get data - pd.DataFrame like VcfData
+            or VcfData(delete_variation_with_non_standard_nucleotide = False)
+        """
+
+        if isinstance(data,VcfData):
+            data = data.vcf
+
+        data_for_change = data[data['ALT'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X') |
+                                      data['REF'].str.contains('N|W|R|M|Y|K|S|H|V|B|D|X')]
+        data_for_change = data_for_change['REF'].str.split(',')  + data_for_change['ALT'].str.split(',')
+
+        for var_lst,var_index in zip(data_for_change,data_for_change.index):
+            new_alt = []
+            mem = 0
+            for var_num in range(len(var_lst)):                
+                logic_non_standart = ("N" in var_lst[var_num] or "W" in var_lst[var_num] or
+                                      "R" in var_lst[var_num] or "M" in var_lst[var_num] or
+                                      "Y" in var_lst[var_num] or "K" in var_lst[var_num] or
+                                      "S" in var_lst[var_num] or "H" in var_lst[var_num] or
+                                      "V" in var_lst[var_num] or "B" in var_lst[var_num] or
+                                      "D" in var_lst[var_num] or "X" in var_lst[var_num])
+                if logic_non_standart:
+                    var_num -= mem
+                    mem += 1                    
+                    sclice_var_strain = data.loc[var_index][9:]
+                    for var_strain, strain in zip(sclice_var_strain, sclice_var_strain.index):
+                        if var_strain == '.':
+                            continue
+                        elif int(var_strain) > var_num:
+                            data.loc[var_index, strain] = int(data.loc[var_index, strain]) - 1
+                        elif int(var_strain) == var_num:
+                            data.loc[var_index, strain] = '.'
+                else:
+                    new_alt.append(var_lst[var_num])                    
+                data.loc[var_index, 'ALT'] = ','.join(new_alt[1:])
+        data.drop(data[data['ALT'] == ''].index, inplace=True)
+        data.drop(data[data['REF'] == ''].index, inplace=True)
+
+
 
 if __name__  == "__main__":
 
@@ -384,13 +432,34 @@ if __name__  == "__main__":
     class TestVcfData(unittest.TestCase):
 
         def test_genotype(self):
+
+            test_vcf_file = os.path.join('.','test','test_vcf.vcf')
+            vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=5)
+            vcf_inst = VcfData(vcf_inst.copy())
+
             test_inst_genotype = pd.Series({"B":"genotype1","C":"genotype2",
                                             "D":np.nan,"E":"genotype1",
                                             "K":"genotype3","Z":np.nan})
+            samples_variation_dict = { 
+                    'SNP01': ['A', 3],
+                    'SNP02': ['A', 401],
+                    'SNP03': ['A', 405],}
+
+            template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
+                                index=["SNP01","SNP02","SNP03"])
+
+            named_variation = vcf_inst.genotype_on_variation(template_for_genotype,samples_variation_dict)
+
             self.assertEqual(list(vcf_inst.genotype.values), list(test_inst_genotype.values), "Incorrect genotype")
             self.assertEqual(list(vcf_inst.genotype.index), list(test_inst_genotype.index), "Incorrect genotype")
 
         def test_recluster_variant(self):
+
+            test_vcf_file = os.path.join('.','test','test_vcf.vcf')
+            vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=5)
+            vcf_inst = VcfData(vcf_inst.copy())
+            vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
+
             new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
             recluster_df_test = pd.DataFrame(data=[[0, 0, 1, 1, np.nan, 1],[1, 0, 1, np.nan, 0, 0]],
                                              columns=['B', 'C', 'D', 'E', 'K', 'Z'],
@@ -398,16 +467,22 @@ if __name__  == "__main__":
             self.assertTrue((new_cluster_df.fillna(-1) == recluster_df_test.fillna(-1)).all(axis=None), "Incorrect genotype recluster variant")
 
 
+    pd.options.display.max_columns = 20    
+
     samples_variation_dict = { 
                     'SNP01': ['A', 3],
                     'SNP02': ['A', 401],
                     'SNP03': ['A', 405],}
 
+    template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
+                                        index=["SNP01","SNP02","SNP03"])
 
-    vcf_inst = pd.read_csv('test_vcf.vcf',sep='\t',header=5)
+    test_vcf_file = os.path.join('.','test','test_vcf.vcf')
+    vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=5)
     #vcf_inst = vcf_inst.astype("object")
-    vcf_inst = VcfData(vcf_inst.copy())
+    vcf_inst = VcfData(vcf_inst.copy(),delete_variation_with_non_standard_nucleotide = True)
     #del vcf_reader
+    
     template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
                                         index=["SNP01","SNP02","SNP03"])
 
@@ -417,9 +492,8 @@ if __name__  == "__main__":
 
     vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
     vcf_inst.vcf_param
-
-    var_ind = ["A_481_21","A_583_22"]
-    new_cluster_df = recluster_variant(vcf_inst,var_ind,distance_pair=10)
  
+     
+    replace_non_standart_nucleotide_to_na_values(vcf_inst)
 
     unittest.main(exit=False)
