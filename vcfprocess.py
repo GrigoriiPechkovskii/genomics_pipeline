@@ -7,6 +7,8 @@ import pandas as pd
 
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 
+import pipeline_base
+
 print('start vcfproc')
 
 def timer_decor(func):
@@ -26,6 +28,10 @@ class VcfData():
     '''Main class for vcf (variant calling format) procsising '''
     COLUMNS_STANDARD = ["#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT"]
     COLUMNS_STANDARD_LENGTH = len(COLUMNS_STANDARD)
+    SAMPLE_NA_VALUE_FOR_REPLACE = "." # na value when u read vcf data, replaced to SAMPLE_NA_VALUE 
+    SAMPLE_NA_VALUE = np.nan
+    SAMPLE_VALUE_TYPE = "float32"
+    SAMPLE_VALUE_TYPE_CORE = "int32"
 
     def __init__(self,
         DataFrame=pd.DataFrame(columns=COLUMNS_STANDARD),
@@ -41,6 +47,7 @@ class VcfData():
 
         self.vcf_drop_duplicate(drop_duplicate)
         self.vcf_uniq_reindexing(set_uniq_index)
+        self.vcf_type_convert()
 
 
     @property
@@ -105,14 +112,24 @@ class VcfData():
         else:
             raise TypeError("Vcf is incorrect")
 
-    def vcf_uniq_reindexing(self,set_uniq_index=True):
+    def vcf_type_convert(self):
+        """ Convert dtypes VcfData  """
+
+        self.__vcf.replace(self.SAMPLE_NA_VALUE_FOR_REPLACE,self.SAMPLE_NA_VALUE, inplace=True)
+        columns_dict_to_convert = {"POS":"int64","ID":"str","REF":"str","ALT":"str","QUAL":"int64",
+                                   "FILTER":"str","INFO":"str","FORMAT":"str"}
+        columns_dict_to_convert.update({col:self.SAMPLE_VALUE_TYPE for col in self.vcf_bin.columns})
+        self.__vcf = self.__vcf.astype(columns_dict_to_convert)        
+
+
+    def vcf_uniq_reindexing(self,set_uniq_index=True,delimiter="_"):
         """ Reindexing vcf data auto
         """
         if set_uniq_index:
             num_str = np.array(range(self.__vcf.shape[0]),dtype=str)
-            self.__vcf.index = self.__vcf['#CHROM'] + '_' + self.__vcf['POS'].astype(str) + '_'  + num_str
+            self.__vcf.index = self.__vcf['#CHROM'] + delimiter + self.__vcf['POS'].astype(str) + delimiter  + num_str
         else:
-            self.__vcf.index = self.__vcf['#CHROM'] + '_' + self.__vcf['POS'].astype(str)
+            self.__vcf.index = self.__vcf['#CHROM'] + delimiter + self.__vcf['POS'].astype(str)
 
     def vcf_drop_duplicate(self,drop_duplicate=True):
         """ Delete row with duplicat CHROM, POS columns """
@@ -170,9 +187,9 @@ class VcfData():
                 df = pd.DataFrame({"Value_template_genotype":self.template_for_genotype[template_var], 
                                    "Value_sample_genotype":self.template_samples_variation[sample_var]})#!
 
-                if ((df['Value_sample_genotype']).astype(str) == '.').any():
-                    self.genotype[sample_var] = np.nan                    
-                elif (df['Value_template_genotype'].astype(int) == df['Value_sample_genotype'].astype(int)).all():#! 222               
+                if ((df['Value_sample_genotype']).isna()).any():
+                    self.genotype[sample_var] = np.nan
+                elif (df['Value_template_genotype'] == df['Value_sample_genotype']).all():               
                     self.genotype[sample_var] = template_var
                     
         self.genotype = self.genotype[self.__vcf.columns[self.COLUMNS_STANDARD_LENGTH:]] #sort
@@ -226,12 +243,10 @@ class VcfData():
                     param_lst.append(str(len(val)))
                 if mass_variation:
                     param_lst.append(str(self._lenmass(val)))
+                variant_dict[num] = delimiter.join(param_lst)
 
-                variant_dict[str(num)] = delimiter.join(param_lst)
-                variant_dict[num] = delimiter.join(param_lst) #!for int            
-
-            variant_dict['.'] = '.'    
-            series_lst.append(variant_series.astype('object').replace(variant_dict))
+            variant_dict[self.SAMPLE_NA_VALUE] = self.SAMPLE_NA_VALUE
+            series_lst.append(variant_series.replace(variant_dict))
 
         self.vcf_param = pd.DataFrame(series_lst)
 
@@ -285,7 +300,6 @@ class VcfData():
         
         self.seq_variance = df
 
-
     def definition_core_vcf(self,type_core:str="TOTAL"):
         """  Definition core vcf from __vcf
             Core vcf - vcf do not have missing (NA or '.')values in sample columns
@@ -293,22 +307,23 @@ class VcfData():
                         TOTAL - core have all variation
 
         """
-        self.core_vcf = self.__vcf[(self.vcf_bin.astype(str) != '.').all(axis=1)]
+        self.vcf_core = self.__vcf[(self.vcf_bin.notna()).all(axis=1)]
         if type_core == "TOTAL":            
             pass
         elif type_core == "SNP":
-            self.core_vcf = self.core_vcf[self.core_vcf['INFO'].astype(str) == 'SNP']
+            self.vcf_core = self.vcf_core[self.vcf_core['INFO'] == 'SNP']
         else:
             raise ValueError("Argument type_core must be 'TOTAL' or 'SNP'")
+        self.vcf_core = self.vcf_core.astype({col:self.SAMPLE_VALUE_TYPE_CORE for col in self.vcf_bin.columns})
 
     def snp_uniq_finder(self):        
         
         dict_can_snp = samples_variation_dict
 
-        if not hasattr(self, 'core_vcf'): 
-            raise AttributeError("VcfData has no attribute 'core_vcf'")
+        if not hasattr(self, 'vcf_core'): 
+            raise AttributeError("VcfData has no attribute 'vcf_core'")
 
-        df_res = self.core_vcf.iloc[:,self.COLUMNS_STANDARD_LENGTH:].T
+        df_res = self.vcf_core.iloc[:,self.COLUMNS_STANDARD_LENGTH:].T
         
         snp_lst_uniq = []
         for i in df_res.columns:
@@ -324,9 +339,9 @@ class VcfData():
         return snp_lst_uniq
 
 
-    def to_set_snptype(self,named_set_snptype=None):        
+    def to_set_snptype(self,named_set_snptype=None,name_snp="snp"):
         
-        snp_lst_uniq = self.snp_uniq_finder()        
+        snp_lst_uniq = self.snp_uniq_finder()
         self.snp_type = pd.Series(data = np.nan,index =self.vcf_bin.index,name='snp_type')
         uniq_number = 0               
         for n_uniq in range(len(snp_lst_uniq)):
@@ -339,11 +354,11 @@ class VcfData():
                         self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = named_set_snptype[named_snptype_key]
                         flag = False
                 if flag:
-                    self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])].replace(np.nan,'snp' + str(uniq_number+1))
+                    self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])].replace(np.nan,name_snp + str(uniq_number+1))
                     uniq_number += 1
                     flag = True
             else:
-                self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])].replace(np.nan,'snp' + str(uniq_number+1))
+                self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])].replace(np.nan,name_snp + str(uniq_number+1))
                 uniq_number += 1
 
 
@@ -359,19 +374,19 @@ def recluster_variant(vcf_data,variant_index,distance_pair=10):
     new_cluster_df = pd.DataFrame(columns=vcf_data.vcf_bin.columns)
     
     for variant_index in variant_index:
-        
-        variation_condition_without_na = vcf_data.vcf.loc[variant_index][9:] != '.'
-        slice_variant_len = vcf_data.vcf_param.loc[variant_index][9:][variation_condition_without_na]
-        old_cluster_series = vcf_data.vcf.loc[variant_index][9:][variation_condition_without_na]
 
-        slice_variant_len_reshape = np.reshape(slice_variant_len.values.astype(int), (len(slice_variant_len.values.astype(int)), 1))
+        variation_condition_without_na = (vcf_data.vcf.loc[variant_index][vcf_data.COLUMNS_STANDARD_LENGTH:]).notna()
+        slice_variant_len = vcf_data.vcf_param.loc[variant_index][vcf_data.COLUMNS_STANDARD_LENGTH:][variation_condition_without_na]
+        old_cluster_series = vcf_data.vcf.loc[variant_index][vcf_data.COLUMNS_STANDARD_LENGTH:][variation_condition_without_na]
+
+        slice_variant_len_reshape = np.reshape(slice_variant_len.values, (len(slice_variant_len.values), 1))
         link = linkage(slice_variant_len_reshape,method='average', metric='euclidean')
         find_cluster = fcluster(link, distance_pair,criterion = 'distance')
         
         find_cluster_series = pd.Series(find_cluster,slice_variant_len.index)
         new_cluster_series = old_cluster_series.copy()
 
-        zero_new = find_cluster_series.loc[old_cluster_series[old_cluster_series == '0'].index].values[0]#!check all values
+        zero_new = find_cluster_series.loc[old_cluster_series[old_cluster_series == 0].index].values[0]#!check all values
 
         for i,j in zip(old_cluster_series.index,find_cluster_series.values):
             if new_cluster_series[i] == 0:
@@ -383,6 +398,8 @@ def recluster_variant(vcf_data,variant_index,distance_pair=10):
 
         new_cluster_series.update(new_cluster_series[new_cluster_series>zero_new] - 1)
         new_cluster_df = new_cluster_df.append(new_cluster_series)
+
+        new_cluster_df = new_cluster_df.astype(vcf_data.SAMPLE_VALUE_TYPE)
 
     return new_cluster_df
 
@@ -485,22 +502,31 @@ if __name__  == "__main__":
                                         index=["SNP01","SNP02","SNP03"])
 
     test_vcf_file = os.path.join('.','test','test_vcf.vcf')
-    vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=0)
+    header,vcf_head,type_head = pipeline_base.vcf_head_process(test_vcf_file)
+    vcf_inst = pd.read_csv(test_vcf_file,sep='\t',header=header)
     #vcf_inst = vcf_inst.astype("object")
     vcf_inst = VcfData(vcf_inst.copy(),drop_duplicate=True,delete_variation_with_non_standard_nucleotide = True,
         drop_variation_with_na_in_ref_and_alt=True)
     
-    '''
     template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
                                         index=["SNP01","SNP02","SNP03"])
 
     named_variation = vcf_inst.samples_variation_template_slicer(samples_variation_dict)
     named_variation = vcf_inst.genotype_on_variation(template_for_genotype,samples_variation_dict)
     vcf_inst.genotype
+    
+    vcf_inst.compute_param(number_variation=True, length_variation=True, mass_variation=True,delimiter="_")
+    vcf_inst.vcf_param
+
+    vcf_inst.definition_core_vcf("SNP")
+    lst = vcf_inst.snp_uniq_finder()
+    vcf_inst.to_set_snptype()
+    vcf_inst.snp_type
 
     vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
-    vcf_inst.vcf_param
-    
+    new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
+
+    '''    
  
     dv = replace_non_standart_nucleotide_to_na_values(vcf_inst)
     '''
