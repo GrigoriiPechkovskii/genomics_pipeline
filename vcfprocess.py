@@ -317,8 +317,6 @@ class VcfData():
         self.vcf_core = self.vcf_core.astype({col:self.SAMPLE_VALUE_TYPE_CORE for col in self.vcf_bin.columns})
 
     def snp_uniq_finder(self):        
-        
-        dict_can_snp = samples_variation_dict
 
         if not hasattr(self, 'vcf_core'): 
             raise AttributeError("VcfData has no attribute 'vcf_core'")
@@ -361,6 +359,42 @@ class VcfData():
                 self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])] = self.snp_type[self.snp_type.index.isin(snp_lst_uniq[n_uniq])].replace(np.nan,name_snp + str(uniq_number+1))
                 uniq_number += 1
 
+    def snp_type_compute_parameter(self,reindexing_with_param=True):
+        """ Function to compute parameter base on self.snp_type
+            return snp_type_parameter with 
+            first_varation - first varation with particular snp_type,
+            snp_type_counts - counts the number snp_type in vcf,
+            genome_sum - counts the number separated particular snp_type genome
+        """
+        if not hasattr(self, 'snp_type'): 
+            raise AttributeError("VcfData has no attribute 'snp_type'") 
+
+        snp_type_notna = self.snp_type[self.snp_type.notna()]
+        snp_type_counts = snp_type_notna.value_counts()
+        snp_type_counts.name = 'snp_type_counts'
+        snp_type_parameter = pd.DataFrame(snp_type_counts)
+        snp_type_parameter["snp_type"] = snp_type_parameter.index
+        genome_sum = []
+        first_varation_lst = []
+        
+        for snp_type_name in snp_type_counts.index:
+            first_varation = snp_type_notna[snp_type_notna == snp_type_name].index[0]
+            genome_sum.append(self.vcf_bin.loc[first_varation].sum())
+            first_varation_lst.append(first_varation)
+
+        snp_type_parameter["genome_sum"] = genome_sum
+        snp_type_parameter["first_varation"] = first_varation_lst
+
+        if reindexing_with_param:
+            snp_type_parameter.index = snp_type_parameter.index + "_" + \
+                                       snp_type_parameter['first_varation'] + "_" + \
+                                       snp_type_parameter['snp_type_counts'].astype(str) + "_" + \
+                                       snp_type_parameter['genome_sum'].astype(str)
+            
+            snp_type_parameter.index.name = None #for some version bug
+
+        snp_type_parameter = snp_type_parameter.sort_values(["genome_sum","snp_type_counts"])        
+        return snp_type_parameter
 
 def recluster_variant(vcf_data,variant_index,distance_pair=10):
     """ Functioin change value in vcf sample depending clustering (in present depending mass clustering)
@@ -522,9 +556,13 @@ if __name__  == "__main__":
     lst = vcf_inst.snp_uniq_finder()
     vcf_inst.to_set_snptype()
     vcf_inst.snp_type
+    snp_type_parameter = vcf_inst.snp_type_compute_parameter()
+
+
 
     vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
     new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
+
 
     '''    
  
