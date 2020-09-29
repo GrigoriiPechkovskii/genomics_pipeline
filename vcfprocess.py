@@ -158,7 +158,9 @@ class VcfData():
             if not template_samples_variation_val.empty:
                 named_variation[template_samples_variation_val.index[0]] = key                 
             else:
-                raise ValueError("Variation " + key + " not found")
+                warnings.warn("Variation " + key + " not found", stacklevel=2)
+                #raise ValueError("Variation " + key + " not found")
+
         
         return named_variation
 
@@ -518,19 +520,19 @@ if __name__  == "__main__":
             vcf_inst = VcfData(vcf_inst.copy())
             vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
 
-            new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
+            new_cluster_df = recluster_variant(vcf_inst,["A_481_25","A_583_26"],distance_pair=10)
             recluster_df_test = pd.DataFrame(data=[[0, 0, 1, 1, np.nan, 1],[1, 0, 1, np.nan, 0, 0]],
                                              columns=['B', 'C', 'D', 'E', 'K', 'Z'],
-                                             index=['A_481_21', 'A_583_22'])
+                                             index=['A_481_25', 'A_583_26'])
             self.assertTrue((new_cluster_df.fillna(-1) == recluster_df_test.fillna(-1)).all(axis=None), "Incorrect genotype recluster variant")
 
 
     pd.options.display.max_columns = 20    
 
     samples_variation_dict = { 
-                    'SNP01': ['A', 3],
-                    'SNP02': ['A', 401],
-                    'SNP03': ['A', 405],}
+                    'NAMED_SNP01': ['A', 3],
+                    'NAMED_SNP02': ['A', 401],
+                    'NAMED_SNP03': ['A', 405],}
 
     template_for_genotype = pd.DataFrame(data=[[0,0,0],[1,1,0],[1,0,1]],columns=["genotype1","genotype2","genotype3"],
                                         index=["SNP01","SNP02","SNP03"])
@@ -554,14 +556,22 @@ if __name__  == "__main__":
 
     vcf_inst.definition_core_vcf("SNP")
     lst = vcf_inst.snp_uniq_finder()
-    vcf_inst.to_set_snptype()
+    vcf_inst.to_set_snptype(named_variation)
     vcf_inst.snp_type
     snp_type_parameter = vcf_inst.snp_type_compute_parameter()
 
 
 
     vcf_inst.compute_param(number_variation=False, length_variation=True, mass_variation=False,delimiter="_")
-    new_cluster_df = recluster_variant(vcf_inst,["A_481_21","A_583_22"],distance_pair=10)
+    new_cluster_df = recluster_variant(vcf_inst,["A_481_25","A_583_26"],distance_pair=10)
+
+    samples_variation_dict_2 = { 
+                    'NAMED_SNP04': ['A', 411],
+                    'NAMED_SNP05': ['A', 415],
+                    'NAMED_SNP06': ['A', 425]}
+    named_variation_2 = vcf_inst.samples_variation_template_slicer(samples_variation_dict_2)
+    named_variation.update(named_variation_2)
+    vcf_inst.to_set_snptype(named_variation)
 
 
     '''    
